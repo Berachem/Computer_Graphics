@@ -64,6 +64,9 @@
     "*.html": "html",
     "xstring": "cpp",
     "xiosbase": "cpp",
-    "vector": "cpp"
+    "vector": "cpp",
+    "array": "cpp",
+    "deque": "cpp",
+    "string_view": "cpp"
   }
 }
