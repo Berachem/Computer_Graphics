@@ -11,6 +11,14 @@ Pour lancer le programme, il faut d'abord compiler le code.
 Avec MINGW64 :
 
 ```bash
+
+pacman -S mingw-w64-x86_64-toolchain \
+           mingw-w64-x86_64-glew \
+           mingw-w64-x86_64-glfw \
+           mingw-w64-x86_64-glm \
+           mingw-w64-x86_64-cmake
+
+
 cd ./build
 cmake ..
 make
