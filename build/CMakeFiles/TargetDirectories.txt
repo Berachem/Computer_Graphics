@@ -1,3 +1,0 @@
-C:/Users/nadia/Documents/GitHub/Computer_Graphics/build/CMakeFiles/ProjetOpenGL.dir
-C:/Users/nadia/Documents/GitHub/Computer_Graphics/build/CMakeFiles/edit_cache.dir
-C:/Users/nadia/Documents/GitHub/Computer_Graphics/build/CMakeFiles/rebuild_cache.dir

@@ -18,9 +18,9 @@ pacman -S mingw-w64-x86_64-toolchain \
            mingw-w64-x86_64-glm \
            mingw-w64-x86_64-cmake
 
-
-cd ./build
-cmake ..
+rm -rf build        # supprime l’ancienne build (cache CMake, binaires…)
+mkdir build && cd build
+cmake -G "Unix Makefiles" ..
 make
 ```
 
