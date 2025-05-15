@@ -5,6 +5,9 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
+#include "Sphere.h"
+#include "TextureLoader.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 // Dimensions de la fenêtre
 const unsigned int SCR_WIDTH = 1280;
@@ -16,6 +19,11 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 // Timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+// Variables pour la rotation de la sphère
+float luneOrbitRadius = 10.0f;     // Distance de la sphère par rapport à l'avion
+float luneOrbitSpeed = 0.25f;      // Vitesse de rotation autour de l'avion
+float luneSelfRotSpeed = 1.0f;    // Vitesse de rotation sur elle-même
 
 // Prototypes
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -61,9 +69,13 @@ int main()
     // Charger les shaders
     Shader simpleShader("../shaders/simple_color.vert", "../shaders/simple_color.frag");
     Shader phongShader("../shaders/phong.vert", "../shaders/phong.frag");
+    Shader texturedShader("../shaders/textured.vert", "../shaders/textured.frag");
 
     // Charger un modèle
     Model myModel("../models/map-bump.obj");
+
+    // Créer une sphère texturée (texture, rayon, secteurs, stacks)
+    Sphere moonSphere("../textures/moon_texture.jpg", 0.5f, 36, 18);
 
     // Configurer les callbacks de la souris
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -94,12 +106,39 @@ int main()
         phongShader.setMat4("projection", projection);
         phongShader.setMat4("view", view);
 
-        // Transformation du modèle
+        // Transformation du modèle d'avion
         glm::mat4 model = glm::mat4(1.0f);
         phongShader.setMat4("model", model);
 
-        // Dessiner
+        // Dessiner l'avion
         myModel.Draw(phongShader);
+
+        // Calculer la position de la sphère (rotation autour de l'avion)
+        float orbitAngle = currentFrame * luneOrbitSpeed;
+        float sphereX = luneOrbitRadius * cos(orbitAngle);
+        float sphereZ = luneOrbitRadius * sin(orbitAngle);
+
+        // Transformation de la sphère (lune)
+        glm::mat4 sphereModel = glm::mat4(1.0f);
+        // Translation à la position orbitale
+        sphereModel = glm::translate(sphereModel, glm::vec3(sphereX, 2.0f, sphereZ));
+        // Rotation sur elle-même
+        sphereModel = glm::rotate(sphereModel, currentFrame * luneSelfRotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        // Activer le shader texturé pour la lune
+        texturedShader.use();
+        texturedShader.setMat4("projection", projection);
+        texturedShader.setMat4("view", view);
+        texturedShader.setMat4("model", sphereModel);
+        texturedShader.setVec3("lightPos", glm::vec3(5.0f, 5.0f, 5.0f));
+        texturedShader.setVec3("viewPos", camera.Position);
+
+        // Dessiner la sphère texturée (lune)
+        moonSphere.Draw(texturedShader);
+
+        // Revenir au shader phong pour les autres objets
+        phongShader.use();
+        phongShader.setMat4("model", model);
 
         // Affichage
         glfwSwapBuffers(window);
