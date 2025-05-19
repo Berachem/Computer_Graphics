@@ -9,6 +9,11 @@
 #include "TextureLoader.h"
 #include <glm/gtc/matrix_transform.hpp>
 
+// === ImGui ===
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 // Dimensions de la fenêtre
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
@@ -65,6 +70,14 @@ int main()
 
     // Activer le depth test
     glEnable(GL_DEPTH_TEST);
+
+    // === Initialisation ImGui ===
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330 core");
 
     // Charger les shaders
     Shader simpleShader("../shaders/simple_color.vert", "../shaders/simple_color.frag");
@@ -140,14 +153,44 @@ int main()
         phongShader.use();
         phongShader.setMat4("model", model);
 
+        // === ImGui : début de frame ===
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Ta fenêtre HUD
+        {
+            ImGui::Begin("Controls",
+                         nullptr,
+                         ImGuiWindowFlags_NoDecoration |
+                         ImGuiWindowFlags_AlwaysAutoResize |
+                         ImGuiWindowFlags_NoBackground);
+            ImGui::Text("Z : Avancer    S : Reculer");
+            ImGui::Text("Q : Gauche     D : Droite");
+            ImGui::Text("A : Descendre  E : Monter");
+            ImGui::Text("Souris : Pivoter");
+            ImGui::End();
+        }
+
+        // Rendu ImGui
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         // Affichage
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    // === Nettoyage ImGui ===
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glfwTerminate();
     return 0;
 }
+
+
 
 // Resize callback
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)
