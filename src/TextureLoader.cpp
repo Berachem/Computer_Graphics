@@ -25,7 +25,7 @@ unsigned int loadTexture(const char* path)
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         
-        // Paramètres de texture
+        // Paramètres de texture    
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -33,6 +33,7 @@ unsigned int loadTexture(const char* path)
         
         stbi_image_free(data);
         std::cout << "Texture chargée avec succès: " << path << std::endl;
+        std::cout << "Nombre de composantes de l'image: " << nrComponents << std::endl;
     }
     else
     {

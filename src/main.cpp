@@ -88,7 +88,7 @@ int main()
     Model myModel("../models/map-bump.obj");
 
     // Créer une sphère texturée (texture, rayon, secteurs, stacks)
-    Sphere moonSphere("../textures/moon.png", 0.5f, 36, 18);
+    Sphere moonSphere("../textures/spherical_moon_texture.jpg", 0.5f, 36, 18);
 
     // Configurer les callbacks de la souris
     glfwSetCursorPosCallback(window, mouse_callback);
