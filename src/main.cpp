@@ -153,28 +153,66 @@ int main()
         phongShader.use();
         phongShader.setMat4("model", model);
 
-        // === ImGui : début de frame ===
+        // début de frame ImGui…
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Ta fenêtre HUD
-        {
-            ImGui::Begin("Controls",
-                         nullptr,
-                         ImGuiWindowFlags_NoDecoration |
-                         ImGuiWindowFlags_AlwaysAutoResize |
-                         ImGuiWindowFlags_NoBackground);
-            ImGui::Text("Z : Avancer    S : Reculer");
-            ImGui::Text("Q : Gauche     D : Droite");
-            ImGui::Text("A : Descendre  E : Monter");
-            ImGui::Text("Souris : Pivoter");
-            ImGui::End();
-        }
+        // --- juste avant ImGui::Begin("Controls",…) ---
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(
+            ImVec2(viewport->WorkPos.x + 10, 
+                viewport->WorkPos.y + viewport->WorkSize.y - 10),
+            ImGuiCond_Always,
+            ImVec2(0.0f, 1.0f)       // pivot = coin bas-gauche de la fenêtre
+        );
 
-        // Rendu ImGui
+        ImGui::Begin("Controls", nullptr,
+                    ImGuiWindowFlags_NoDecoration |
+                    ImGuiWindowFlags_AlwaysAutoResize |
+                    ImGuiWindowFlags_NoBackground);
+
+        // taille et espacement
+        const float keySize = 40.0f;
+        const float sp     = ImGui::GetStyle().ItemSpacing.x;
+
+        // petite lambda pour dessiner une touche « caps »
+        auto drawKey = [&](const char* label, int glfw_key){
+            bool down = (glfwGetKey(window, glfw_key) == GLFW_PRESS);
+            ImVec4 col = down 
+            ? ImVec4(0.2f,0.8f,0.2f,1.0f) 
+            : ImGui::GetStyleColorVec4(ImGuiCol_Button);
+            ImGui::PushStyleColor(ImGuiCol_Button,         col);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  ImVec4(col.x+0.1f, col.y+0.1f, col.z+0.1f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   ImVec4(col.x-0.1f, col.y-0.1f, col.z-0.1f, 1.0f));
+            ImGui::Button(label, ImVec2(keySize, keySize));
+            ImGui::PopStyleColor(3);
+        };
+
+        // 1️⃣ Première ligne : on centre “Z”
+        ImGui::Dummy(ImVec2(keySize, 0.0f)); ImGui::SameLine();
+        drawKey("Z", GLFW_KEY_W);
+        ImGui::SameLine((3*keySize + 2*sp) + sp*5);
+        drawKey("A", GLFW_KEY_Q);
+
+        //ImGui::NewLine();
+
+        // 2️⃣ Deuxième ligne : Q, S, D
+        drawKey("Q", GLFW_KEY_A); ImGui::SameLine();
+        drawKey("S", GLFW_KEY_S); ImGui::SameLine();
+        drawKey("D", GLFW_KEY_D);
+        // et, juste à leur droite, les touche A et E
+        //ImGui::SameLine((3*keySize + 2*sp) + sp);
+        ImGui::SameLine((3*keySize + 2*sp) + sp*5);
+        drawKey("E", GLFW_KEY_E);
+
+        ImGui::End();
+
+
+        // rendu ImGui…
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 
         // Affichage
         glfwSwapBuffers(window);
