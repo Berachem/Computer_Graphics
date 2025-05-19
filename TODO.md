@@ -17,13 +17,13 @@
 - Choix entre des objets avec shading Lambert, Phong, etc.  
 - Utiliser un UBO pour la projection + caméra et un autre pour la transformation  
 - Implémenter une classe `mat4` en C++ incluant la multiplication de matrices
-
+- Affichage des touches de navigation  
+- Intégrer une interface graphique avec IMGUI (https://github.com/ocornut/imgui)
 ---
 
 ## ❌ Non fait
 
-- Affichage des touches de navigation  
 - Ajout d'autres objets (ex. : une étoile, un autre vaisseau qui tire, un objet avec environment map, etc.) Une sphere (lune) ajouter avec une texture et rotation 
 - Positionner les objets avec des translations, rotations, scales variés  
 - Implémenter les FBO et ajouter du post-traitement  
-- Intégrer une interface graphique avec IMGUI (https://github.com/ocornut/imgui)
+
