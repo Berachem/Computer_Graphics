@@ -90,6 +90,7 @@ int main()
     Shader phongShader("../shaders/phong.vert", "../shaders/phong.frag");
     Shader texturedShader("../shaders/textured.vert", "../shaders/textured.frag");
     Shader sunShader("../shaders/sun.vert", "../shaders/sun.frag");
+    Shader metalShader("../shaders/metal.vert", "../shaders/metal.frag");  // Nouveau shader métal
 
     // Charger un modèle
     Model myModel("../models/map-bump.obj");
@@ -123,25 +124,25 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Activer le shader
-        phongShader.use();
+        // Activer le shader métal pour l'avion
+        metalShader.use();
 
         // Matrices
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        phongShader.setMat4("projection", projection);
-        phongShader.setMat4("view", view);
+        metalShader.setMat4("projection", projection);
+        metalShader.setMat4("view", view);
         
-        // Définir la position de la lumière pour le shader phong
-        phongShader.setVec3("lightPos", lightPosition);
-        phongShader.setVec3("viewPos", camera.Position);
+        // Définir la position de la lumière pour le shader métal
+        metalShader.setVec3("lightPos", lightPosition);
+        metalShader.setVec3("viewPos", camera.Position);
 
         // Transformation du modèle d'avion
         glm::mat4 model = glm::mat4(1.0f);
-        phongShader.setMat4("model", model);
+        metalShader.setMat4("model", model);
 
-        // Dessiner l'avion
-        myModel.Draw(phongShader);
+        // Dessiner l'avion avec l'effet métallique
+        myModel.Draw(metalShader);
 
         // Calculer la position de la sphère (rotation autour de l'avion)
         float orbitAngle = currentFrame * luneOrbitSpeed;
