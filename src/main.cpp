@@ -31,8 +31,8 @@ float luneOrbitSpeed = 0.25f;      // Vitesse de rotation autour de l'avion
 float luneSelfRotSpeed = 1.0f;    // Vitesse de rotation sur elle-même
 
 // Position et taille du soleil
-float sunDistance = 50.0f;         // Distance du soleil
-float sunRadius = 10.0f;           // Rayon du soleil
+float sunDistance = 100.0f;         // Distance du soleil
+float sunRadius = 45.0f;           // Rayon du soleil
 glm::vec3 lightPosition = glm::vec3(-sunDistance, 15.0f, -sunDistance); // Position de la lumière (même que le soleil)
 
 // Prototypes
