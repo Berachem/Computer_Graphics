@@ -30,11 +30,17 @@ float luneOrbitRadius = 10.0f;     // Distance de la sphère par rapport à l'av
 float luneOrbitSpeed = 0.25f;      // Vitesse de rotation autour de l'avion
 float luneSelfRotSpeed = 1.0f;    // Vitesse de rotation sur elle-même
 
+// Position et taille du soleil
+float sunDistance = 50.0f;         // Distance du soleil
+float sunRadius = 10.0f;           // Rayon du soleil
+glm::vec3 lightPosition = glm::vec3(-sunDistance, 15.0f, -sunDistance); // Position de la lumière (même que le soleil)
+
 // Prototypes
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+void updateSunPosition(float time);
 
 // Mouse variables
 float lastX = SCR_WIDTH / 2.0f;
@@ -83,12 +89,16 @@ int main()
     Shader simpleShader("../shaders/simple_color.vert", "../shaders/simple_color.frag");
     Shader phongShader("../shaders/phong.vert", "../shaders/phong.frag");
     Shader texturedShader("../shaders/textured.vert", "../shaders/textured.frag");
+    Shader sunShader("../shaders/sun.vert", "../shaders/sun.frag");
 
     // Charger un modèle
     Model myModel("../models/map-bump.obj");
 
     // Créer une sphère texturée (texture, rayon, secteurs, stacks)
     Sphere moonSphere("../textures/spherical_moon_texture.jpg", 0.5f, 36, 18);
+    
+    // Créer une sphère pour le soleil (pas de texture, juste une couleur uniforme)
+    Sphere sunSphere("", sunRadius, 36, 18);
 
     // Configurer les callbacks de la souris
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -105,6 +115,9 @@ int main()
 
         // Input
         processInput(window);
+        
+        // Mise à jour de la position du soleil
+        updateSunPosition(currentFrame);
 
         // Effacer l'écran
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -118,6 +131,10 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         phongShader.setMat4("projection", projection);
         phongShader.setMat4("view", view);
+        
+        // Définir la position de la lumière pour le shader phong
+        phongShader.setVec3("lightPos", lightPosition);
+        phongShader.setVec3("viewPos", camera.Position);
 
         // Transformation du modèle d'avion
         glm::mat4 model = glm::mat4(1.0f);
@@ -143,12 +160,25 @@ int main()
         texturedShader.setMat4("projection", projection);
         texturedShader.setMat4("view", view);
         texturedShader.setMat4("model", sphereModel);
-        texturedShader.setVec3("lightPos", glm::vec3(5.0f, 5.0f, 5.0f));
+        texturedShader.setVec3("lightPos", lightPosition); // Utiliser la position du soleil comme source de lumière
         texturedShader.setVec3("viewPos", camera.Position);
 
         // Dessiner la sphère texturée (lune)
         moonSphere.Draw(texturedShader);
 
+        // Dessiner le soleil avec le nouveau shader
+        sunShader.use();
+        sunShader.setMat4("projection", projection);
+        sunShader.setMat4("view", view);
+        sunShader.setFloat("time", currentFrame);  // Passage du temps au shader
+        
+        // Positionner le soleil loin dans la scène
+        glm::mat4 sunModel = glm::mat4(1.0f);
+        sunModel = glm::translate(sunModel, lightPosition);
+        sunShader.setMat4("model", sunModel);
+        
+        sunSphere.Draw(sunShader);
+        
         // Revenir au shader phong pour les autres objets
         phongShader.use();
         phongShader.setMat4("model", model);
@@ -281,4 +311,12 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+// Mise à jour de la position du soleil si nécessaire (exemple avec rotation)
+void updateSunPosition(float time) {
+    float angle = time * 0.0005f; // Très lente rotation
+    lightPosition.x = -sunDistance * cos(angle);
+    lightPosition.z = -sunDistance * sin(angle);
+    lightPosition.y = 15.0f;
 }
