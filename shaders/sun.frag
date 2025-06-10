@@ -105,7 +105,7 @@ void main() {
     //ajout d'un effet Fresnel
     vec3 viewDir = normalize(viewPos - FragPos);
     float fresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), fresnelPower);
-    color = mix(color, brightColor * 1.5, fresnel);
+    color = mix(color, darkColor*1.3, fresnel);
     
     //rendu final
     FragColor = vec4(color, 1.0);
