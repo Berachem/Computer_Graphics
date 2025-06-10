@@ -40,7 +40,6 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
-void updateSunPosition(float time);
 
 // Mouse variables
 float lastX = SCR_WIDTH / 2.0f;
@@ -94,12 +93,19 @@ int main()
 
     // Charger un modèle
     Model myModel("../models/map-bump.obj");
+   
 
     // Créer une sphère texturée (texture, rayon, secteurs, stacks)
     Sphere moonSphere("../textures/spherical_moon_texture.jpg", 0.5f, 36, 18);
     
     // Créer une sphère pour le soleil (pas de texture, juste une couleur uniforme)
     Sphere sunSphere("", sunRadius, 36, 18);
+
+    //asteroids
+    Model asteroid1("../models/astroid.obj");
+    Model asteroid2("../models/astroid.obj");
+    Model asteroid3("../models/astroid.obj");
+    Model asteroid4("../models/astroid.obj"); 
 
     // Configurer les callbacks de la souris
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -116,75 +122,166 @@ int main()
 
         // Input
         processInput(window);
-        
-        // Mise à jour de la position du soleil
-        updateSunPosition(currentFrame);
 
         // Effacer l'écran
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Activer le shader métal pour l'avion
-        metalShader.use();
+        //======== VAISSEAU ========
 
-        // Matrices
+        //shader
+        metalShader.use();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         metalShader.setMat4("projection", projection);
         metalShader.setMat4("view", view);
-        
-        // Définir la position de la lumière pour le shader métal
         metalShader.setVec3("lightPos", lightPosition);
         metalShader.setVec3("viewPos", camera.Position);
 
-        // Transformation du modèle d'avion
+        //position
         glm::mat4 model = glm::mat4(1.0f);
         metalShader.setMat4("model", model);
 
-        // Dessiner l'avion avec l'effet métallique
+        //draw
         myModel.Draw(metalShader);
 
-        // Calculer la position de la sphère (rotation autour de l'avion)
+        //======== LUNE ========
+
+        //shader
+        texturedShader.use();
+        texturedShader.setMat4("projection", projection);
+        texturedShader.setMat4("view", view);
+        texturedShader.setVec3("lightPos", lightPosition); // Utiliser la position du soleil comme source de lumière
+        texturedShader.setVec3("viewPos", camera.Position);
+
+        //orbite
         float orbitAngle = currentFrame * luneOrbitSpeed;
         float sphereX = luneOrbitRadius * cos(orbitAngle);
         float sphereZ = luneOrbitRadius * sin(orbitAngle);
 
-        // Transformation de la sphère (lune)
+        //position
         glm::mat4 sphereModel = glm::mat4(1.0f);
-        // Translation à la position orbitale
         sphereModel = glm::translate(sphereModel, glm::vec3(sphereX, 2.0f, sphereZ));
-        // Rotation sur elle-même
         sphereModel = glm::rotate(sphereModel, currentFrame * luneSelfRotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        // Activer le shader texturé pour la lune
-        texturedShader.use();
-        texturedShader.setMat4("projection", projection);
-        texturedShader.setMat4("view", view);
         texturedShader.setMat4("model", sphereModel);
-        texturedShader.setVec3("lightPos", lightPosition); // Utiliser la position du soleil comme source de lumière
-        texturedShader.setVec3("viewPos", camera.Position);
 
-        // Dessiner la sphère texturée (lune)
+        //draw
         moonSphere.Draw(texturedShader);
 
-        // Dessiner le soleil avec le nouveau shader
+        //======== SOLEIL ========
+
+        //shader
         sunShader.use();
         sunShader.setMat4("projection", projection);
         sunShader.setMat4("view", view);
-        sunShader.setFloat("time", currentFrame);  // Passage du temps au shader
-        
-        // Positionner le soleil loin dans la scène
+        sunShader.setFloat("time", currentFrame);
+
+        //orbite
+        float angle = currentFrame * 0.0005f; // Très lente rotation
+        lightPosition.x = -sunDistance * cos(angle);
+        lightPosition.z = -sunDistance * sin(angle);
+        lightPosition.y = 15.0f;
+
+        //position
         glm::mat4 sunModel = glm::mat4(1.0f);
         sunModel = glm::translate(sunModel, lightPosition);
         sunShader.setMat4("model", sunModel);
         
+        //draw
         sunSphere.Draw(sunShader);
         
-        // Revenir au shader phong pour les autres objets
+        //======== ASTEROIDS ========
+        
+        //shader
         phongShader.use();
-        phongShader.setMat4("model", model);
+        phongShader.setVec3("lightPos", lightPosition);
+        phongShader.setVec3("viewPos", camera.Position);
+        phongShader.setMat4("projection", projection);
+        phongShader.setMat4("view", view);
+        
+        //astéroïde 1
+        //positions par rapport au soleil (qui est la source de la lumière) avec un angle de 15°
+        float asteroidOrbitAngle = currentFrame * 0.5f;
+        float asteroidOrbitRadius = 60.0f;
+        float asteroidX = lightPosition.x + asteroidOrbitRadius * cos(asteroidOrbitAngle);
+        float asteroidZ = lightPosition.z + asteroidOrbitRadius * sin(asteroidOrbitAngle);
+        
+        float inclinationAngle = glm::radians(15.0f);
+        glm::mat4 inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroidPosition = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle)
+        );
+        glm::vec4 inclinedPosition = inclinationMatrix * glm::vec4(asteroidPosition, 1.0f);
 
-        // début de frame ImGui…
+        glm::mat4 asteroidModel = glm::mat4(1.0f);
+        asteroidModel = glm::translate(asteroidModel, glm::vec3(lightPosition.x + inclinedPosition.x, lightPosition.y + inclinedPosition.y, lightPosition.z + inclinedPosition.z));
+        asteroidModel = glm::scale(asteroidModel, glm::vec3(0.05f, 0.05f, 0.05f));
+        asteroidModel = glm::rotate(asteroidModel, asteroidOrbitAngle * 10.0f, glm::vec3(0.0f, 1.0f, 0.5f));
+        phongShader.setMat4("model", asteroidModel);
+
+        //draw
+        asteroid1.Draw(phongShader);
+        
+        //astéroïde 2
+        inclinationAngle = glm::radians(11.0f);
+        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroid2Position = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(10.0f)),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(10.0f))
+        );
+        glm::vec4 inclinedPosition2 = inclinationMatrix * glm::vec4(asteroid2Position, 1.0f);
+        
+        glm::mat4 asteroid2Model = glm::mat4(1.0f);
+        asteroid2Model = glm::translate(asteroid2Model, glm::vec3(lightPosition.x + inclinedPosition2.x, lightPosition.y + inclinedPosition2.y, lightPosition.z + inclinedPosition2.z));
+        asteroid2Model = glm::scale(asteroid2Model, glm::vec3(0.025f, 0.042f, 0.015f));
+        asteroid2Model = glm::rotate(asteroid2Model, asteroidOrbitAngle * 7.0f, glm::vec3(0.5f, 1.0f, 0.0f));
+        phongShader.setMat4("model", asteroid2Model);
+        
+        //draw
+        asteroid2.Draw(phongShader);
+        
+        //astéroïde 3
+        inclinationAngle = glm::radians(0.0f);
+        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroid3Position = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(15.0f)),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(15.0f))
+        );
+        glm::vec4 inclinedPosition3 = inclinationMatrix * glm::vec4(asteroid3Position, 1.0f);
+        
+        glm::mat4 asteroid3Model = glm::mat4(1.0f);
+        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        asteroid3Model = glm::translate(asteroid3Model, glm::vec3(lightPosition.x + inclinedPosition3.x, lightPosition.y + inclinedPosition3.y, lightPosition.z + inclinedPosition3.z));
+        asteroid3Model = glm::scale(asteroid3Model, glm::vec3(0.08f, 0.08f, 0.08f));
+        asteroid3Model = glm::rotate(asteroid3Model, asteroidOrbitAngle * 12.0f, glm::vec3(1.0f, 0.0f, 1.0f));
+        phongShader.setMat4("model", asteroid3Model);
+        
+        //draw
+        asteroid3.Draw(phongShader);
+        
+        ////astéroïde 4
+        inclinationAngle = glm::radians(-7.0f);
+        glm::vec3 asteroid4Position = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(20.0f)),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(20.0f))
+        );
+        glm::vec4 inclinedPosition4 = inclinationMatrix * glm::vec4(asteroid4Position, 1.0f);
+        
+        glm::mat4 asteroid4Model = glm::mat4(1.0f);
+        asteroid4Model = glm::translate(asteroid4Model, glm::vec3(lightPosition.x + inclinedPosition4.x, lightPosition.y + inclinedPosition4.y, lightPosition.z + inclinedPosition4.z));
+        asteroid4Model = glm::scale(asteroid4Model, glm::vec3(0.012f, 0.014f, 0.013f));
+        asteroid4Model = glm::rotate(asteroid4Model, asteroidOrbitAngle * 5.0f, glm::vec3(0.3f, 0.7f, 0.2f));
+        phongShader.setMat4("model", asteroid4Model);
+        
+        //draw
+        asteroid4.Draw(phongShader);
+       
+        //======== INTERFACE IMGUI ========
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -312,12 +409,4 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
-}
-
-// Mise à jour de la position du soleil si nécessaire (exemple avec rotation)
-void updateSunPosition(float time) {
-    float angle = time * 0.0005f; // Très lente rotation
-    lightPosition.x = -sunDistance * cos(angle);
-    lightPosition.z = -sunDistance * sin(angle);
-    lightPosition.y = 15.0f;
 }
