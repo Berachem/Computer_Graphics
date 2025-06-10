@@ -17,7 +17,7 @@ void main()
 {
     Time = time;
     
-    // Calcul des positions et normales
+    //calcul des positions et normales
     FragPos = vec3(model * vec4(aPos, 1.0));
     Normal = mat3(transpose(inverse(model))) * aNormal;
     

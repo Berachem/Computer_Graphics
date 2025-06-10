@@ -15,10 +15,10 @@ out vec3 ViewDir;
 void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
-    // Calcul correct des normales avec la matrice inverse transposée
+    //calcul des normales avec la matrice inverse transposée
     Normal = mat3(transpose(inverse(model))) * aNormal;
     
-    // Précalculer le vecteur de vue pour les effets spéculaires
+    //calculer le vecteur de vue pour les effets
     vec3 viewPos = vec3(inverse(view)[3]);
     ViewDir = normalize(viewPos - FragPos);
     
