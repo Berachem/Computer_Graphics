@@ -5,10 +5,16 @@ in vec3 FragPos;
 in vec3 Normal;
 in float Time;
 
+// Add uniform for camera position
+uniform vec3 viewPos;
+
 // Constantes pour le bruit de Perlin
 const int octaves = 3;        
 const float persistence = 0.6;
 const float lacunarity = 2.0;
+
+// Constante pour l'effet Fresnel
+const float fresnelPower = 2.0; // Contrôle l'intensité de l'effet
 
 //fonction pour permuter les valeurs (hash)
 float hash(float n) {
@@ -67,6 +73,7 @@ float fbm3D(vec3 p) {
 void main() {
     //normalisation de la position du fragment
     vec3 p = normalize(FragPos);
+    vec3 normal = normalize(Normal);
 
     //couleurs pour le soleil
     vec3 brightColor = vec3(0.95, 0.7, 0.3);    //orange-doré
@@ -94,6 +101,11 @@ void main() {
     //effet de pulsation (lent)
     float pulse = 0.07 * sin(Time * 0.7);
     color += pulse;
+    
+    //ajout d'un effet Fresnel
+    vec3 viewDir = normalize(viewPos - FragPos);
+    float fresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), fresnelPower);
+    color = mix(color, brightColor * 1.5, fresnel);
     
     //rendu final
     FragColor = vec4(color, 1.0);
