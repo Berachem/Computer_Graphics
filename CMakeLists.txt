@@ -16,15 +16,27 @@ find_package(GLM REQUIRED)
 
 # ---- GLFW et GLEW (MSYS2) ----
 # on suppose qu'ils sont installés dans /mingw64 via pacman
-# et qu’on linke directement les .a qui s’appellent libglfw3.a et libglew32.a  
+# et qu’on linke directement les .a qui s’appellent libglfw3.a et libglew32.a
 find_library(GLFW3_LIB   glfw3   PATHS ${CMAKE_SYSTEM_PREFIX_PATH}/lib)
 find_library(GLEW32_LIB  glew32  PATHS ${CMAKE_SYSTEM_PREFIX_PATH}/lib)
+
+# ---- OpenAL pour l'audio (optionnel) ----
+find_library(OPENAL_LIB  openal  PATHS ${CMAKE_SYSTEM_PREFIX_PATH}/lib)
 
 if(NOT GLFW3_LIB)
   message(FATAL_ERROR "Impossible de trouver libglfw3.a")
 endif()
 if(NOT GLEW32_LIB)
   message(FATAL_ERROR "Impossible de trouver libglew32.a")
+endif()
+
+# OpenAL est optionnel
+if(OPENAL_LIB)
+  message(STATUS "OpenAL trouvé: ${OPENAL_LIB}")
+  add_definitions(-DHAVE_OPENAL)
+else()
+  message(WARNING "OpenAL non trouvé - le système audio sera désactivé")
+  message(STATUS "Pour installer OpenAL: pacman -S mingw-w64-x86_64-openal")
 endif()
 
 # ---- ImGui (static) ----
@@ -45,11 +57,19 @@ target_include_directories(imgui PUBLIC
 )
 
 # ---- Linking final ----
-target_link_libraries(ProjetOpenGL
-    PRIVATE
-        imgui             # ImGui
-        OpenGL::GL        # opengl32.lib
-        ${GLFW3_LIB}      # libglfw3.a
-        ${GLEW32_LIB}     # libglew32.a
-        # GLM n'a pas besoin de .lib
+set(LINK_LIBRARIES
+    imgui             # ImGui
+    OpenGL::GL        # opengl32.lib
+    ${GLFW3_LIB}      # libglfw3.a
+    ${GLEW32_LIB}     # libglew32.a
+    # GLM n'a pas besoin de .lib
 )
+
+# Ajouter OpenAL si disponible
+if(OPENAL_LIB)
+    list(APPEND LINK_LIBRARIES ${OPENAL_LIB})
+endif()
+
+target_link_libraries(ProjetOpenGL PRIVATE ${LINK_LIBRARIES})
+
+

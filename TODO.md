@@ -9,6 +9,9 @@
 - Charger des objets au format OBJ en utilisant la bibliothèque TinyOBJLoader,  
   en gérant les matériaux (couleurs ambiantes, diffuses, spéculaires)  
 - Avoir de l’illumination avec l’équation de Phong ou Blinn–Phong
+- Affichage des touches de navigation  
+- Intégrer une interface graphique avec IMGUI (https://github.com/ocornut/imgui)
+- Affichage des touches de navigation  
 
 ---
 
@@ -17,13 +20,10 @@
 - Choix entre des objets avec shading Lambert, Phong, etc.  
 - Utiliser un UBO pour la projection + caméra et un autre pour la transformation  
 - Implémenter une classe `mat4` en C++ incluant la multiplication de matrices
-- Affichage des touches de navigation  
-- Intégrer une interface graphique avec IMGUI (https://github.com/ocornut/imgui)
 ---
 
 ## ❌ Non fait
 
 - Ajout d'autres objets (ex. : une étoile, un autre vaisseau qui tire, un objet avec environment map, etc.) Une sphere (lune) ajouter avec une texture et rotation 
-- Positionner les objets avec des translations, rotations, scales variés  
 - Implémenter les FBO et ajouter du post-traitement  
 
