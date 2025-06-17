@@ -7,6 +7,9 @@
 #include "Sphere.h"
 #include "AudioSource.h"
 #include "Sound.h"
+#include "UIHelpers.h"
+#include "Skybox.h"
+#include "SkyboxManager.h"
 #include <memory>
 #include <glm/glm.hpp>
 
@@ -36,9 +39,12 @@ private:
     std::unique_ptr<Sphere> moonSphere;
     std::unique_ptr<Sphere> sunSphere;
 
-    // === Audio ===
+    // === Audio (mutualisé via SoundManager) ===
     std::shared_ptr<Sound> zooSound;
     std::shared_ptr<AudioSource> ambientSource;
+    // Skybox pour cette scène
+    std::unique_ptr<Skybox> skybox;
+    SkyboxManager::SkyboxType currentSkyboxType;
 
     // === Variables de scène ===
     float sunRadius;
@@ -49,8 +55,7 @@ private:
     bool LoadModels();
     bool LoadAudio(SoundManager& soundManager);
     void RenderObjects(Camera& camera, int screenWidth, int screenHeight);
-    void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager);
-    void RenderKeyboardUI(GLFWwindow* window);
+    void ChangeSkybox(SkyboxManager::SkyboxType newType);
 
 public:
     /**

@@ -311,3 +311,25 @@ void SoundManager::CleanupFinishedSources() {
         m_audioSources.end()
     );
 }
+
+std::shared_ptr<AudioSource> SoundManager::GetAmbientSource() {
+    return m_ambientSource;
+}
+
+std::shared_ptr<Sound> SoundManager::GetAmbientSound() {
+    return m_ambientSound;
+}
+
+void SoundManager::SetupAmbientAudio(const std::string& filePath, const std::string& soundName) {
+    if (!m_initialized) return;
+    if (!m_ambientSound) {
+        m_ambientSound = LoadSound(filePath, soundName);
+    }
+    if (m_ambientSound && !m_ambientSource) {
+        m_ambientSource = CreateAudioSource();
+        if (m_ambientSource) {
+            m_ambientSource->SetPosition({0.0f, 0.0f, 0.0f});
+            m_ambientSource->SetVolume(0.3f);
+        }
+    }
+}

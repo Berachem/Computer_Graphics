@@ -4,8 +4,12 @@
 #include "Scene.h"
 #include "Shader.h"
 #include "Sphere.h"
+#include "Skybox.h"
+#include "SkyboxManager.h"
 #include <memory>
-#include <glm/glm.hpp>
+// Forward declarations
+class Sound;
+class AudioSource;
 
 /**
  * @brief Scène simple avec seulement une source de lumière
@@ -20,6 +24,8 @@ private:
 
     // === Objets 3D ===
     std::unique_ptr<Sphere> lightSphere;
+    std::unique_ptr<Skybox> skybox;
+    SkyboxManager::SkyboxType currentSkyboxType;
 
     // === Variables de scène ===
     glm::vec3 lightPosition;
@@ -29,10 +35,16 @@ private:
     float currentRotation;
     bool initialized;
 
+    // === Audio (mutualisé via SoundManager) ===
+    std::shared_ptr<Sound> zooSound;
+    std::shared_ptr<AudioSource> ambientSource;
+
     // === Méthodes privées ===
     bool LoadShaders();
     bool CreateLightSphere();
     void RenderLight(Camera& camera, int screenWidth, int screenHeight);
+    bool LoadAudio(SoundManager& soundManager);
+    void ChangeSkybox(SkyboxManager::SkyboxType newType);
 
 public:
     /**

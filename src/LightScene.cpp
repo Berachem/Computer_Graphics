@@ -1,7 +1,11 @@
 #include "LightScene.h"
+#include "UIHelpers.h"
+#include "AudioSource.h"
+#include "Sound.h"
 #include "imgui.h"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+#include "Skybox.h"
 
 LightScene::LightScene()
     : lightPosition(-50.0f, 20.0f, -50.0f),  // Position statique éloignée
@@ -34,6 +38,18 @@ bool LightScene::Initialize(Camera& camera, SoundManager& soundManager) {
         std::cerr << "Erreur : échec de la création de la sphère de lumière" << std::endl;
         return false;
     }
+
+    // Charger l'audio
+    if (!LoadAudio(soundManager)) {
+        std::cerr << "Avertissement : échec du chargement de l'audio pour LightScene" << std::endl;
+        // Continuer sans audio
+    }
+
+    // Charger la skybox spatiale pour LightScene (différente de MainScene)
+    currentSkyboxType = SkyboxManager::SkyboxType::SPACE;
+    std::vector<std::string> skyboxFaces = SkyboxManager::GetSkyboxFaces(currentSkyboxType);
+    skybox = std::make_unique<Skybox>(skyboxFaces);
+    std::cout << "Skybox chargée pour LightScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
 
     initialized = true;
     std::cout << "LightScene initialisée avec succès" << std::endl;
@@ -73,7 +89,11 @@ void LightScene::Update(float deltaTime, GLFWwindow* window, Camera& camera, Sou
 
 void LightScene::Render(Camera& camera, int screenWidth, int screenHeight) {
     if (!initialized) return;
-
+    // Rendu skybox
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)screenWidth / screenHeight, 0.1f, 100.0f);
+    glm::mat4 view = camera.GetViewMatrix();
+    if (skybox) skybox->Render(view, projection);
+    // Rendu de la lumière
     RenderLight(camera, screenWidth, screenHeight);
 }
 
@@ -102,8 +122,26 @@ void LightScene::RenderLight(Camera& camera, int screenWidth, int screenHeight) 
 void LightScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
     if (!initialized) return;
 
-    // Utiliser la même interface que MainScene - pas d'interface spécifique à la lumière
-    // L'interface principale (contrôles principaux) est gérée par main.cpp
+    // Interface audio et clavier mutualisée
+    UIHelpers::RenderAudioUI(window, soundManager, ambientSource, zooSound);
+    UIHelpers::RenderKeyboardUI(window);
+
+    // Interface de sélection de skybox
+    ImGui::Begin("Contrôles Skybox - LightScene");
+    ImGui::Text("Skybox actuelle: %s", SkyboxManager::GetSkyboxName(currentSkyboxType).c_str());
+
+    if (ImGui::Button("Skybox Colorée")) {
+        ChangeSkybox(SkyboxManager::SkyboxType::COLORER);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Skybox Par Défaut")) {
+        ChangeSkybox(SkyboxManager::SkyboxType::DEFAULT);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Skybox Spatiale")) {
+        ChangeSkybox(SkyboxManager::SkyboxType::SPACE);
+    }
+    ImGui::End();
 }
 
 
@@ -128,4 +166,21 @@ void LightScene::Cleanup() {
 
     initialized = false;
     std::cout << "LightScene nettoyée" << std::endl;
+}
+
+bool LightScene::LoadAudio(SoundManager& soundManager) {
+    if (!soundManager.IsInitialized()) return false;
+    soundManager.SetupAmbientAudio();
+    zooSound = soundManager.GetAmbientSound();
+    ambientSource = soundManager.GetAmbientSource();
+    return (zooSound && ambientSource);
+}
+
+void LightScene::ChangeSkybox(SkyboxManager::SkyboxType newType) {
+    if (newType != currentSkyboxType) {
+        currentSkyboxType = newType;
+        std::vector<std::string> skyboxFaces = SkyboxManager::GetSkyboxFaces(currentSkyboxType);
+        skybox = std::make_unique<Skybox>(skyboxFaces);
+        std::cout << "Skybox changée pour LightScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
+    }
 }

@@ -112,6 +112,21 @@ public:
      */
     void Update();
 
+    /**
+     * @brief Accès à la source audio d'ambiance mutualisée
+     */
+    std::shared_ptr<AudioSource> GetAmbientSource();
+
+    /**
+     * @brief Accès au son d'ambiance mutualisé
+     */
+    std::shared_ptr<Sound> GetAmbientSound();
+
+    /**
+     * @brief Initialise la source et le son d'ambiance (à appeler après Initialize)
+     */
+    void SetupAmbientAudio(const std::string& filePath = "../sound/Zoo.wav", const std::string& soundName = "zoo_ambient");
+
 private:
     // Contexte OpenAL
 #ifdef HAVE_OPENAL
@@ -129,6 +144,10 @@ private:
     // Collections des ressources audio
     std::unordered_map<std::string, std::shared_ptr<Sound>> m_sounds;
     std::vector<std::shared_ptr<AudioSource>> m_audioSources;
+
+    // === Ambiance mutualisée ===
+    std::shared_ptr<Sound> m_ambientSound;
+    std::shared_ptr<AudioSource> m_ambientSource;
     
     /**
      * @brief Vérifie les erreurs OpenAL et les affiche

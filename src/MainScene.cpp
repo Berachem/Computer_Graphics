@@ -1,4 +1,6 @@
 #include "MainScene.h"
+#include "Skybox.h"
+#include "UIHelpers.h"
 #include "imgui.h"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
@@ -43,6 +45,12 @@ bool MainScene::Initialize(Camera& camera, SoundManager& soundManager) {
         // Continuer sans audio
     }
 
+    // Charger la skybox colorée pour MainScene
+    currentSkyboxType = SkyboxManager::SkyboxType::COLORER;
+    std::vector<std::string> skyboxFaces = SkyboxManager::GetSkyboxFaces(currentSkyboxType);
+    skybox = std::make_unique<Skybox>(skyboxFaces);
+    std::cout << "Skybox chargée pour MainScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
+
     initialized = true;
     std::cout << "MainScene initialisée avec succès" << std::endl;
     return true;
@@ -80,21 +88,11 @@ bool MainScene::LoadModels() {
 }
 
 bool MainScene::LoadAudio(SoundManager& soundManager) {
-    if (!soundManager.IsInitialized()) {
-        return false;
-    }
-
-    zooSound = soundManager.LoadSound("../sound/Zoo.wav", "zoo_ambient");
-    if (zooSound) {
-        ambientSource = soundManager.CreateAudioSource();
-        if (ambientSource) {
-            ambientSource->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-            ambientSource->SetVolume(0.3f);
-            // Ne pas jouer automatiquement - sera contrôlé par l'interface
-            return true;
-        }
-    }
-    return false;
+    if (!soundManager.IsInitialized()) return false;
+    soundManager.SetupAmbientAudio();
+    zooSound = soundManager.GetAmbientSound();
+    ambientSource = soundManager.GetAmbientSource();
+    return (zooSound && ambientSource);
 }
 
 void MainScene::Update(float deltaTime, GLFWwindow* window, Camera& camera, SoundManager& soundManager) {
@@ -125,10 +123,26 @@ void MainScene::Render(Camera& camera, int screenWidth, int screenHeight) {
 void MainScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
     if (!initialized) return;
 
-    // Interface audio uniquement pour la scène principale
-    RenderAudioUI(window, soundManager);
-    // Interface clavier pour visualiser les touches
-    RenderKeyboardUI(window);
+    // Interface audio et clavier mutualisée
+    UIHelpers::RenderAudioUI(window, soundManager, ambientSource, zooSound);
+    UIHelpers::RenderKeyboardUI(window);
+
+    // Interface de sélection de skybox
+    ImGui::Begin("Contrôles Skybox - MainScene");
+    ImGui::Text("Skybox actuelle: %s", SkyboxManager::GetSkyboxName(currentSkyboxType).c_str());
+
+    if (ImGui::Button("Skybox Colorée")) {
+        ChangeSkybox(SkyboxManager::SkyboxType::COLORER);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Skybox Par Défaut")) {
+        ChangeSkybox(SkyboxManager::SkyboxType::DEFAULT);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Skybox Spatiale")) {
+        ChangeSkybox(SkyboxManager::SkyboxType::SPACE);
+    }
+    ImGui::End();
 }
 
 const char* MainScene::GetName() const {
@@ -137,7 +151,7 @@ const char* MainScene::GetName() const {
 
 void MainScene::OnActivate() {
     std::cout << "MainScene activée" << std::endl;
-    // Reprendre l'audio si nécessaire
+    // Reprendre l'audio si nécessaire (une seule fois)
     if (ambientSource && zooSound && !ambientSource->IsPlaying()) {
         ambientSource->Play(zooSound, true);
     }
@@ -152,10 +166,13 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
     float currentFrame = static_cast<float>(glfwGetTime());
 
     // Matrices de projection et de vue communes
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
-                                          (float)screenWidth / (float)screenHeight,
-                                          0.1f, 1000.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)screenWidth / screenHeight, 0.1f, 1000.0f);
     glm::mat4 view = camera.GetViewMatrix();
+
+    // Rendu de la skybox en premier
+    if (skybox) {
+        skybox->Render(view, projection);
+    }
 
     //======== VAISSEAU ========
     metalShader->use();
@@ -284,142 +301,6 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
     asteroid4->Draw(*phongShader);
 }
 
-void MainScene::RenderAudioUI(GLFWwindow* window, SoundManager& soundManager) {
-    if (!soundManager.IsInitialized()) return;
-
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Contrôles Audio", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    // Volume principal avec affichage de la valeur
-    float masterVolume = soundManager.GetMasterVolume();
-    ImGui::Text("Volume Principal: %.0f%%", masterVolume * 100.0f);
-    if (ImGui::SliderFloat("##MasterVolume", &masterVolume, 0.0f, 1.0f, "%.2f")) { 
-        soundManager.SetMasterVolume(masterVolume);
-    }
-
-    ImGui::Separator();
-
-    // Contrôles pour le son d'ambiance
-    if (zooSound && ambientSource) {
-        ImGui::Text("Son d'ambiance: %s", zooSound->GetFileName().c_str());
-        ImGui::Text("Durée: %.1fs", zooSound->GetDuration());
-
-        // État avec couleur
-        bool isPlaying = ambientSource->IsPlaying();
-        bool isPaused = ambientSource->IsPaused();
-
-        if (isPlaying) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "État: En cours");
-        } else if (isPaused) {
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "État: En pause");
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "État: Arrêté");
-        }
-
-        // Boutons avec couleurs - Logique corrigée pour la pause/reprise
-        if (!isPlaying && !isPaused) {
-            // État arrêté - Bouton Jouer
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-            if (ImGui::Button("Jouer")) {
-                ambientSource->Play(zooSound, true);
-            }
-            ImGui::PopStyleColor();
-        } else if (isPlaying) {
-            // État en cours - Bouton Pause
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.7f, 0.0f, 1.0f));
-            if (ImGui::Button("Pause")) {
-                ambientSource->Pause();
-            }
-            ImGui::PopStyleColor();
-        } else if (isPaused) {
-            // État en pause - Bouton Reprendre
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-            if (ImGui::Button("Reprendre")) {
-                ambientSource->Resume();
-            }
-            ImGui::PopStyleColor();
-        }
-
-        ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.0f, 0.0f, 1.0f));
-        if (ImGui::Button("Arrêter")) {
-            ambientSource->Stop();
-        }
-        ImGui::PopStyleColor();
-
-        // Volume de l'ambiance avec affichage
-        float ambientVolume = ambientSource->GetVolume();
-        ImGui::Text("Volume Ambiance: %.0f%%", ambientVolume * 100.0f);
-        if (ImGui::SliderFloat("##AmbientVolume", &ambientVolume, 0.0f, 1.0f, "%.2f")) {
-            ambientSource->SetVolume(ambientVolume);
-        }
-
-        // Pitch de l'ambiance avec affichage
-        float ambientPitch = ambientSource->GetPitch();
-        ImGui::Text("Pitch Ambiance: %.2fx", ambientPitch);
-        if (ImGui::SliderFloat("##AmbientPitch", &ambientPitch, 0.5f, 2.0f, "%.2f")) {
-            ambientSource->SetPitch(ambientPitch);
-        }
-    } else {
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Son d'ambiance non disponible");
-        ImGui::Text("Vérifiez que Zoo.wav est dans le dossier sound/");
-    }
-
-
-
-    ImGui::End();
-}
-
-void MainScene::RenderKeyboardUI(GLFWwindow* window) {
-    // Interface clavier AZERTY
-    ImGui::SetNextWindowPos(ImVec2(10, 500), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Clavier Virtuel (AZERTY)", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-    const float keySize = 40.0f;
-    const float sp = ImGui::GetStyle().ItemSpacing.x;
-
-    // Lambda pour dessiner une touche
-    auto drawKey = [&](const char* label, int glfw_key, const char* description = nullptr) {
-        bool down = (glfwGetKey(window, glfw_key) == GLFW_PRESS);
-        ImVec4 col = down
-            ? ImVec4(0.2f, 0.8f, 0.2f, 1.0f)
-            : ImGui::GetStyleColorVec4(ImGuiCol_Button);
-        ImGui::PushStyleColor(ImGuiCol_Button, col);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(col.x+0.1f, col.y+0.1f, col.z+0.1f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(col.x-0.1f, col.y-0.1f, col.z-0.1f, 1.0f));
-        ImGui::Button(label, ImVec2(keySize, keySize));
-        ImGui::PopStyleColor(3);
-
-        if (description && ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", description);
-        }
-    };
-
-    ImGui::Text("Déplacement caméra:");
-
-    // Première ligne - W (avant sur clavier, Z sur AZERTY)
-    ImGui::Dummy(ImVec2(keySize, 0.0f)); ImGui::SameLine(0, sp);
-    drawKey("Z", GLFW_KEY_W, "Avant (Z sur AZERTY)"); ImGui::SameLine(0, sp);
-    ImGui::Dummy(ImVec2(keySize, 0.0f)); ImGui::SameLine(0, sp*3);
-    drawKey("A", GLFW_KEY_Q, "Monter (A sur AZERTY)");
-
-    // Deuxième ligne - A S D (gauche, arrière, droite)
-    drawKey("Q", GLFW_KEY_A, "Gauche (Q sur AZERTY)"); ImGui::SameLine(0, sp);
-    drawKey("S", GLFW_KEY_S, "Arrière"); ImGui::SameLine(0, sp);
-    drawKey("D", GLFW_KEY_D, "Droite"); ImGui::SameLine(0, sp*3);
-    drawKey("E", GLFW_KEY_E, "Descendre");
-
-    ImGui::Separator();
-    ImGui::Text("Contrôles:");
-
-    // Troisième ligne - Contrôles
-    drawKey("TAB", GLFW_KEY_TAB, "Basculer mode"); ImGui::SameLine(0, sp);
-    drawKey("P", GLFW_KEY_P, "Changer scène"); ImGui::SameLine(0, sp);
-    drawKey("O", GLFW_KEY_O, "Arrêter sons");
-
-    ImGui::End();
-}
-
 void MainScene::Cleanup() {
     if (ambientSource) {
         ambientSource->Stop();
@@ -443,4 +324,13 @@ void MainScene::Cleanup() {
 
     initialized = false;
     std::cout << "MainScene nettoyée" << std::endl;
+}
+
+void MainScene::ChangeSkybox(SkyboxManager::SkyboxType newType) {
+    if (newType != currentSkyboxType) {
+        currentSkyboxType = newType;
+        std::vector<std::string> skyboxFaces = SkyboxManager::GetSkyboxFaces(currentSkyboxType);
+        skybox = std::make_unique<Skybox>(skyboxFaces);
+        std::cout << "Skybox changée pour MainScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
+    }
 }
