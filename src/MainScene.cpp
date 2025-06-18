@@ -127,22 +127,10 @@ void MainScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
     UIHelpers::RenderAudioUI(window, soundManager, ambientSource, zooSound);
     UIHelpers::RenderKeyboardUI(window);
 
-    // Interface de sélection de skybox
-    ImGui::Begin("Contrôles Skybox - MainScene");
-    ImGui::Text("Skybox actuelle: %s", SkyboxManager::GetSkyboxName(currentSkyboxType).c_str());
-
-    if (ImGui::Button("Skybox Colorée")) {
-        ChangeSkybox(SkyboxManager::SkyboxType::COLORER);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Skybox Par Défaut")) {
-        ChangeSkybox(SkyboxManager::SkyboxType::DEFAULT);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Skybox Spatiale")) {
-        ChangeSkybox(SkyboxManager::SkyboxType::SPACE);
-    }
-    ImGui::End();
+    // Interface de sélection de skybox via menu déroulant mutualisé
+    UIHelpers::RenderSkyboxUI("Contrôles Skybox - MainScene", currentSkyboxType,
+        [this](SkyboxManager::SkyboxType type) { ChangeSkybox(type); }
+    );
 }
 
 const char* MainScene::GetName() const {

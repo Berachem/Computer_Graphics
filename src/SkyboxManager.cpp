@@ -5,14 +5,16 @@
 const std::map<SkyboxManager::SkyboxType, std::string> SkyboxManager::skyboxPaths = {
     {SkyboxType::COLORER, "../skybox/skybox_colorer/"},
     {SkyboxType::DEFAULT, "../skybox/skybox_default/"},
-    {SkyboxType::SPACE, "../skybox/skybox_space/"}
+    {SkyboxType::SPACE, "../skybox/skybox_space/"},
+    {SkyboxType::ZOO,   "../skybox/skybox_zoo/"}
 };
 
 // Définition des noms d'affichage pour chaque type de skybox
 const std::map<SkyboxManager::SkyboxType, std::string> SkyboxManager::skyboxNames = {
     {SkyboxType::COLORER, "Skybox Colorée"},
     {SkyboxType::DEFAULT, "Skybox Par Défaut"},
-    {SkyboxType::SPACE, "Skybox Spatiale"}
+    {SkyboxType::SPACE,  "Skybox Spatiale"},
+    {SkyboxType::ZOO,    "Skybox Zoo"}
 };
 
 std::vector<std::string> SkyboxManager::GetSkyboxFaces(SkyboxType type) {

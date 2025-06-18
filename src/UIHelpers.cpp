@@ -1,4 +1,9 @@
 #include "UIHelpers.h"
+// include pour gestion des skyboxes et types
+#include "SkyboxManager.h"
+#include <vector>
+#include <string>
+
 #include "SoundManager.h"
 #include "AudioSource.h"
 #include "Sound.h"
@@ -124,6 +129,34 @@ void RenderKeyboardUI(GLFWwindow* window) {
     drawKey("P", GLFW_KEY_P, "Changer scène"); ImGui::SameLine(0, sp);
     drawKey("O", GLFW_KEY_O, "Arrêter sons");
 
+    ImGui::End();
+}
+
+void RenderSkyboxUI(const char* title, SkyboxManager::SkyboxType& currentType, std::function<void(SkyboxManager::SkyboxType)> onChange) {
+    ImGui::SetNextWindowPos(ImVec2(350, 10), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_Always); // Largeur plus grande
+    ImGui::Begin(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    static const SkyboxManager::SkyboxType types[] = {
+        SkyboxManager::SkyboxType::COLORER,
+        SkyboxManager::SkyboxType::DEFAULT,
+        SkyboxManager::SkyboxType::SPACE,
+        SkyboxManager::SkyboxType::ZOO
+    };
+    static const char* names[] = {
+        "Skybox Colorée",
+        "Skybox Par Défaut",
+        "Skybox Spatiale",
+        "Skybox Zoo"
+    };
+    int currentIdx = 0;
+    for (int i = 0; i < IM_ARRAYSIZE(types); ++i) {
+        if (types[i] == currentType) { currentIdx = i; break; }
+    }
+    ImGui::Text("Sélectionnez la skybox :");
+    ImGui::SetNextItemWidth(250);
+    if (ImGui::Combo("##SkyboxCombo", &currentIdx, names, IM_ARRAYSIZE(names))) {
+        onChange(types[currentIdx]);
+    }
     ImGui::End();
 }
 

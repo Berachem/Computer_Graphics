@@ -19,7 +19,8 @@ public:
     enum class SkyboxType {
         COLORER,    ///< Skybox colorée
         DEFAULT,    ///< Skybox par défaut
-        SPACE       ///< Skybox spatiale
+        SPACE,       ///< Skybox spatiale
+        ZOO          ///< Skybox Zoo
     };
 
     /**
