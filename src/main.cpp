@@ -274,20 +274,27 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // Gestion de la vitesse de déplacement avec Shift
+    float speedMultiplier = 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
+        speedMultiplier = 5.0f;
+    }
+
     // Contrôles de la caméra (seulement en mode caméra) - Configuration AZERTY
     if (currentMode == CAMERA_MODE) {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)  // W = Avant (Z sur AZERTY)
-            camera.ProcessKeyboard(FORWARD, deltaTime);
+            camera.ProcessKeyboard(FORWARD, deltaTime * speedMultiplier);
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)  // S = Arrière
-            camera.ProcessKeyboard(BACKWARD, deltaTime);
+            camera.ProcessKeyboard(BACKWARD, deltaTime * speedMultiplier);
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)  // A = Gauche (Q sur AZERTY)
-            camera.ProcessKeyboard(LEFT, deltaTime);
+            camera.ProcessKeyboard(LEFT, deltaTime * speedMultiplier);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)  // D = Droite
-            camera.ProcessKeyboard(RIGHT, deltaTime);
+            camera.ProcessKeyboard(RIGHT, deltaTime * speedMultiplier);
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)  // Q = Monter (A sur AZERTY)
-            camera.ProcessKeyboard(UP, deltaTime);
+            camera.ProcessKeyboard(UP, deltaTime * speedMultiplier);
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)  // E = Descendre
-            camera.ProcessKeyboard(DOWN, deltaTime);
+            camera.ProcessKeyboard(DOWN, deltaTime * speedMultiplier);
     }
 
     // Variables statiques pour éviter les répétitions
