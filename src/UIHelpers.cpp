@@ -3,6 +3,7 @@
 #include "SkyboxManager.h"
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include "SoundManager.h"
 #include "AudioSource.h"
@@ -26,37 +27,79 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
 
     ImGui::Separator();
 
-    if (sound && source) {
-        ImGui::Text("Son d'ambiance: %s", sound->GetFileName().c_str());
-        ImGui::Text("Durée: %.1fs", sound->GetDuration());
+    // Sélection du son
+    ImGui::Text("Sélection du son:");
+    std::vector<std::string> soundNames = soundManager.GetSoundNames();
+    std::string currentSoundName = soundManager.GetCurrentSoundName();
+    
+    if (!soundNames.empty()) {
+        // Trouver l'index du son actuel
+        int currentIndex = 0;
+        for (size_t i = 0; i < soundNames.size(); ++i) {
+            if (soundNames[i] == currentSoundName) {
+                currentIndex = static_cast<int>(i);
+                break;
+            }
+        }
+          // Menu déroulant pour sélectionner le son
+        if (ImGui::Combo("Son", &currentIndex, [](void* data, int idx, const char** out_text) {
+            std::vector<std::string>* names = static_cast<std::vector<std::string>*>(data);
+            if (idx >= 0 && idx < static_cast<int>(names->size())) {
+                *out_text = (*names)[idx].c_str();
+                return true;
+            }
+            return false;
+        }, &soundNames, static_cast<int>(soundNames.size()))) {
+            // Changement de son
+            if (currentIndex >= 0 && currentIndex < static_cast<int>(soundNames.size())) {
+                soundManager.SetCurrentAmbientSound(soundNames[currentIndex]);
+                
+                // Lancer automatiquement le nouveau son
+                if (source) {
+                    std::shared_ptr<Sound> newSound = soundManager.GetAmbientSound();
+                    if (newSound) {
+                        source->Play(newSound, true);
+                        std::cout << "Nouveau son lancé automatiquement: " << newSound->GetFileName() << std::endl;
+                    }
+                }
+            }
+        }
+    }    ImGui::Separator();
+
+    // Récupérer le son actuel depuis le SoundManager
+    std::shared_ptr<Sound> currentSound = soundManager.GetAmbientSound();
+    
+    if (currentSound && source) {
+        ImGui::Text("Son d'ambiance: %s", currentSound->GetFileName().c_str());
+        ImGui::Text("Durée: %.1fs", currentSound->GetDuration());
 
         bool isPlaying = source->IsPlaying();
         bool isPaused = source->IsPaused();
 
-        if (isPlaying) {
+        // Debug des états
+        ImGui::Text("Debug - Playing: %s, Paused: %s", isPlaying ? "true" : "false", isPaused ? "true" : "false");
+
+        if (isPlaying && !isPaused) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "État: En cours");
         } else if (isPaused) {
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "État: En pause");
         } else {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "État: Arrêté");
-        }
-
-        if (!isPlaying && !isPaused) {
+        }        // Boutons de contrôle - toujours utiliser currentSound
+        if (!isPlaying || isPaused) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-            if (ImGui::Button("Jouer")) {
-                source->Play(sound, true);
+            if (ImGui::Button(isPaused ? "Reprendre" : "Jouer")) {
+                // Toujours utiliser Play() avec le son actuel pour s'assurer 
+                // que la source utilise le bon buffer audio
+                source->Play(currentSound, true);
             }
             ImGui::PopStyleColor();
-        } else if (isPlaying) {
+        }
+        
+        if (isPlaying && !isPaused) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.7f, 0.0f, 1.0f));
             if (ImGui::Button("Pause")) {
                 source->Pause();
-            }
-            ImGui::PopStyleColor();
-        } else if (isPaused) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-            if (ImGui::Button("Reprendre")) {
-                source->Resume();
             }
             ImGui::PopStyleColor();
         }
@@ -81,7 +124,7 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
         }
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Son d'ambiance non disponible");
-        ImGui::Text("Vérifiez que Zoo.wav est dans le dossier sound/");
+        ImGui::Text("Vérifiez que les fichiers .wav sont dans le dossier sound/");
     }
 
     ImGui::End();

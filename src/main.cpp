@@ -135,6 +135,9 @@ int main()
         std::cerr << "Erreur : échec de l'initialisation du système audio" << std::endl;
         // Continuer sans audio
     } else {
+        // Charger tous les sons disponibles
+        soundManager.LoadAllSounds();
+        
         // Charger le son Zoo.wav (sera géré par les scènes)
         zooSound = soundManager.LoadSound("../sound/Zoo.wav", "zoo_ambient");
 

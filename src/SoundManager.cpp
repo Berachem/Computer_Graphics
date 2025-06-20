@@ -324,6 +324,7 @@ void SoundManager::SetupAmbientAudio(const std::string& filePath, const std::str
     if (!m_initialized) return;
     if (!m_ambientSound) {
         m_ambientSound = LoadSound(filePath, soundName);
+        m_currentSoundName = soundName;
     }
     if (m_ambientSound && !m_ambientSource) {
         m_ambientSource = CreateAudioSource();
@@ -332,4 +333,56 @@ void SoundManager::SetupAmbientAudio(const std::string& filePath, const std::str
             m_ambientSource->SetVolume(0.3f);
         }
     }
+}
+
+void SoundManager::LoadAllSounds() {
+    if (!m_initialized) return;
+    
+    // Charger tous les sons connus
+    LoadSound("../sound/Zoo.wav", "zoo_ambient");
+    LoadSound("../sound/je_suis_un_homme.wav", "je_suis_un_homme");
+    
+    std::cout << "Sons chargés: " << m_sounds.size() << std::endl;
+    for (const auto& pair : m_sounds) {
+        std::cout << "- " << pair.first << std::endl;
+    }
+}
+
+std::vector<std::string> SoundManager::GetSoundNames() const {
+    std::vector<std::string> names;
+    for (const auto& pair : m_sounds) {
+        names.push_back(pair.first);
+    }
+    return names;
+}
+
+bool SoundManager::SetCurrentAmbientSound(const std::string& soundName) {
+    if (!m_initialized || !m_ambientSource) return false;
+    
+    auto sound = GetSound(soundName);
+    if (!sound) {
+        std::cerr << "Son non trouvé: " << soundName << std::endl;
+        return false;
+    }
+    
+    // Sauvegarder l'état de lecture actuel
+    bool wasPlaying = m_ambientSource->IsPlaying();
+    bool wasPaused = m_ambientSource->IsPaused();
+    
+    // Arrêter le son actuel
+    if (wasPlaying || wasPaused) {
+        m_ambientSource->Stop();
+    }
+    
+    // Changer le son
+    m_ambientSound = sound;
+    m_currentSoundName = soundName;
+    
+    // Configurer la source audio avec le nouveau son
+    // (on ne joue pas automatiquement, l'utilisateur devra cliquer sur Play)
+    
+    std::cout << "Son d'ambiance changé vers: " << soundName << std::endl;
+    std::cout << "Nouveau son: " << sound->GetFileName() << std::endl;
+    
+    return true;
 }

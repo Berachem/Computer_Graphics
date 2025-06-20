@@ -127,6 +127,30 @@ public:
      */
     void SetupAmbientAudio(const std::string& filePath = "../sound/Zoo.wav", const std::string& soundName = "zoo_ambient");
 
+    /**
+     * @brief Charge tous les sons disponibles dans le dossier sound/
+     */
+    void LoadAllSounds();
+
+    /**
+     * @brief Récupère la liste de tous les sons chargés
+     * @return Vecteur des noms des sons
+     */
+    std::vector<std::string> GetSoundNames() const;
+
+    /**
+     * @brief Change le son d'ambiance actuel
+     * @param soundName Nom du son à utiliser
+     * @return true si le changement a réussi
+     */
+    bool SetCurrentAmbientSound(const std::string& soundName);
+
+    /**
+     * @brief Récupère le nom du son d'ambiance actuel
+     * @return Nom du son actuel
+     */
+    const std::string& GetCurrentSoundName() const { return m_currentSoundName; }
+
 private:
     // Contexte OpenAL
 #ifdef HAVE_OPENAL
@@ -148,6 +172,7 @@ private:
     // === Ambiance mutualisée ===
     std::shared_ptr<Sound> m_ambientSound;
     std::shared_ptr<AudioSource> m_ambientSource;
+    std::string m_currentSoundName;  // Nom du son actuellement en cours
     
     /**
      * @brief Vérifie les erreurs OpenAL et les affiche

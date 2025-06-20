@@ -23,7 +23,7 @@ cd ..
 rm -rf build        # supprime l’ancienne build (cache CMake, binaires…)
 mkdir build && cd build
 cmake -G "Unix Makefiles" ..
-make
+make -j 4
 ./ProjetOpenGL.exe
 ```
 
