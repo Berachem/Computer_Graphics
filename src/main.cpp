@@ -13,6 +13,8 @@
 #include "SceneManager.h"
 #include "MainScene.h"
 #include "LightScene.h"
+#include "UBO.h"
+#include "ShaderManager.h"
 #include <glm/gtc/matrix_transform.hpp>
 
 // === ImGui ===
@@ -109,6 +111,25 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
+    // === Initialisation du système UBO ===
+    g_uboManager = new UBOManager();
+    if (!g_uboManager->Initialize()) {
+        std::cerr << "Erreur : échec de l'initialisation du système UBO" << std::endl;
+        delete g_uboManager;
+        g_uboManager = nullptr;
+        glfwTerminate();
+        return -1;
+    }
+
+    // === Initialisation du gestionnaire de shaders ===
+    if (!ShaderManager::getInstance().Initialize()) {
+        std::cerr << "Erreur : échec de l'initialisation du gestionnaire de shaders" << std::endl;
+        delete g_uboManager;
+        g_uboManager = nullptr;
+        glfwTerminate();
+        return -1;
+    }
+
     // === Initialisation du système audio ===
     if (!soundManager.Initialize()) {
         std::cerr << "Erreur : échec de l'initialisation du système audio" << std::endl;
@@ -179,6 +200,25 @@ int main()
         // Mettre à jour le gestionnaire de scènes
         sceneManager.Update(deltaTime, window, camera, soundManager);
 
+        // === Mise à jour des UBOs ===
+        if (g_uboManager) {
+            // Matrices de projection et de vue
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 
+                                                   (float)SCR_WIDTH / (float)SCR_HEIGHT, 
+                                                   0.1f, 1000.0f);
+            glm::mat4 view = camera.GetViewMatrix();
+            glm::vec3 viewPos = camera.Position;
+            
+            // Mise à jour du Camera UBO
+            g_uboManager->UpdateCameraUBO(projection, view, viewPos);
+            
+            // Mise à jour du Lighting UBO avec des valeurs par défaut
+            glm::vec3 lightPos(-100.0f, 15.0f, -100.0f);
+            glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+            glm::vec3 ambientColor(0.1f, 0.1f, 0.1f);
+            g_uboManager->UpdateLightingUBO(lightPos, lightColor, ambientColor);
+        }
+
         // Effacer l'écran
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -199,6 +239,13 @@ int main()
         ImGui::Text("Mode actuel: %s", 
                    currentMode == CAMERA_MODE ? "Caméra" : "Interface");
         ImGui::Text("Scène actuelle: %s", sceneManager.GetCurrentSceneName());
+        
+        // Informations de debug caméra
+        ImGui::Separator();
+        ImGui::Text("Position caméra: (%.1f, %.1f, %.1f)", 
+                   camera.Position.x, camera.Position.y, camera.Position.z);
+        ImGui::Text("Direction caméra: (%.1f, %.1f, %.1f)", 
+                   camera.Front.x, camera.Front.y, camera.Front.z);
         
         ImGui::Separator();
         
@@ -237,6 +284,48 @@ int main()
 
         ImGui::End();
 
+        // === Sélecteur de Shader d'Éclairage ===
+        if (ShaderManager::getInstance().GetShowShaderSelector()) {
+            ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Sélecteur de Shader", &ShaderManager::getInstance().GetShowShaderSelector(), 
+                        ImGuiWindowFlags_AlwaysAutoResize);
+            
+            ImGui::Text("Shader d'Éclairage Actuel:");
+            
+            // Radio buttons pour sélectionner le shader
+            LightingShaderType currentType = ShaderManager::getInstance().GetLightingShaderType();
+            
+            if (ImGui::RadioButton("Phong", currentType == LightingShaderType::PHONG)) {
+                ShaderManager::getInstance().SetLightingShaderType(LightingShaderType::PHONG);
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Lambert", currentType == LightingShaderType::LAMBERT)) {
+                ShaderManager::getInstance().SetLightingShaderType(LightingShaderType::LAMBERT);
+            }
+            
+            ImGui::Separator();
+            
+            // Informations sur les objets affectés
+            ImGui::Text("Objets utilisant les shaders d'éclairage:");
+            ImGui::BulletText("Vaisseau (gris métallique)");
+            ImGui::BulletText("Astéroïdes (rouge, bleu, jaune, violet)");
+            ImGui::BulletText("Sphères de test (vert/orange)");
+            
+            ImGui::Separator();
+            ImGui::Text("Objets NON affectés (shaders spécialisés):");
+            ImGui::BulletText("Soleil (shader animé spécialisé)");
+            ImGui::BulletText("Lune (shader texturé)");
+            
+            ImGui::Separator();
+            
+            // Informations sur les shaders
+            ImGui::Text("Différences:");
+            ImGui::BulletText("Phong: Éclairage avec composante spéculaire");
+            ImGui::BulletText("Lambert: Éclairage diffus uniquement");
+            
+            ImGui::End();
+        }
+
         // Rendu de l'interface de la scène actuelle
         sceneManager.RenderUI(window, soundManager);
 
@@ -252,6 +341,15 @@ int main()
     // === Nettoyage ===
     sceneManager.Cleanup();
     soundManager.Shutdown();
+    
+    // Nettoyage du gestionnaire de shaders
+    ShaderManager::getInstance().Cleanup();
+    
+    // Nettoyage du système UBO
+    if (g_uboManager) {
+        delete g_uboManager;
+        g_uboManager = nullptr;
+    }
 
     // === Nettoyage ImGui ===
     ImGui_ImplOpenGL3_Shutdown();

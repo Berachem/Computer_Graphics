@@ -3,7 +3,6 @@ out vec4 FragColor;
 
 in vec3 FragPos;
 in vec3 Normal;
-in vec2 TexCoords;
 
 // UBO pour les données de caméra
 layout (std140) uniform CameraUBO {
@@ -22,29 +21,20 @@ layout (std140) uniform LightingUBO {
     float shininess;
 };
 
-uniform sampler2D texture_diffuse1;
+uniform vec3 objectColor = vec3(0.8, 0.2, 0.6);
 
 void main()
 {
-    // Texture
-    vec4 texColor = texture(texture_diffuse1, TexCoords);
-    
     // Ambient
     vec3 ambient = ambientStrength * ambientColor * lightColor;
-    
-    // Diffuse
+
+    // Diffuse (Lambert)
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
-    
-    // Specular
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularStrength * spec * lightColor;
-    
-    // Résultat final
-    vec3 result = (ambient + diffuse + specular) * texColor.rgb;
+
+    // Pas de composante spéculaire dans Lambert
+    vec3 result = (ambient + diffuse) * objectColor;
     FragColor = vec4(result, 1.0);
 }

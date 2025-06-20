@@ -5,8 +5,12 @@ in vec3 FragPos;
 in vec3 Normal;
 in float Time;
 
-// Add uniform for camera position
-uniform vec3 viewPos;
+// UBO pour les données de caméra
+layout (std140) uniform CameraUBO {
+    mat4 projection;
+    mat4 view;
+    vec3 viewPos;
+};
 
 // Constantes pour le bruit de Perlin
 const int octaves = 3;        

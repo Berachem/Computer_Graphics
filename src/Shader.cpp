@@ -1,4 +1,5 @@
 #include "Shader.h"
+#include "UBO.h"
 
 #include <gl/glew.h>
 #include <glm/glm.hpp>
@@ -132,4 +133,12 @@ void Shader::setMat4(const std::string &name, const glm::mat4 &mat) const
 void Shader::setVec3(const std::string &name, const glm::vec3 &vec) const
 {
     glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &vec[0]);
+}
+
+void Shader::bindUBOs() const
+{
+    // Lier les UBOs à ce shader si le gestionnaire UBO est initialisé
+    if (g_uboManager) {
+        g_uboManager->BindShaderToUBOs(ID);
+    }
 }

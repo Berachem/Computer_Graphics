@@ -1,6 +1,8 @@
 #include "MainScene.h"
 #include "Skybox.h"
 #include "UIHelpers.h"
+#include "ShaderManager.h"
+#include "UBO.h"
 #include "imgui.h"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
@@ -57,17 +59,10 @@ bool MainScene::Initialize(Camera& camera, SoundManager& soundManager) {
 }
 
 bool MainScene::LoadShaders() {
-    try {
-        simpleShader = std::make_unique<Shader>("../shaders/simple_color.vert", "../shaders/simple_color.frag");
-        phongShader = std::make_unique<Shader>("../shaders/phong.vert", "../shaders/phong.frag");
-        texturedShader = std::make_unique<Shader>("../shaders/textured.vert", "../shaders/textured.frag");
-        sunShader = std::make_unique<Shader>("../shaders/sun.vert", "../shaders/sun.frag");
-        metalShader = std::make_unique<Shader>("../shaders/metal.vert", "../shaders/metal.frag");
-        return true;
-    } catch (const std::exception& e) {
-        std::cerr << "Erreur lors du chargement des shaders : " << e.what() << std::endl;
-        return false;
-    }
+    // Les shaders sont maintenant gérés par le ShaderManager global
+    // Pas besoin de les charger ici, ils sont déjà initialisés dans main.cpp
+    std::cout << "MainScene: Utilisation du ShaderManager global" << std::endl;
+    return true;
 }
 
 bool MainScene::LoadModels() {
@@ -80,6 +75,10 @@ bool MainScene::LoadModels() {
         
         moonSphere = std::make_unique<Sphere>("../textures/spherical_moon_texture.jpg", 0.5f, 36, 18);
         sunSphere = std::make_unique<Sphere>("", sunRadius, 36, 18);
+        
+        // Ajouter une sphère de test simple pour comparer les shaders d'éclairage
+        testSphere = std::make_unique<Sphere>("", 2.0f, 32, 16);
+        
         return true;
     } catch (const std::exception& e) {
         std::cerr << "Erreur lors du chargement des modèles : " << e.what() << std::endl;
@@ -153,159 +152,173 @@ void MainScene::OnDeactivate() {
 void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight) {
     float currentFrame = static_cast<float>(glfwGetTime());
 
-    // Matrices de projection et de vue communes
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)screenWidth / screenHeight, 0.1f, 1000.0f);
-    glm::mat4 view = camera.GetViewMatrix();
-
     // Rendu de la skybox en premier
     if (skybox) {
+        // La skybox utilise son propre shader qui n'a pas besoin d'UBO de transformation
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 
+                                               (float)screenWidth / screenHeight, 
+                                               0.1f, 1000.0f);
+        glm::mat4 view = camera.GetViewMatrix();
         skybox->Render(view, projection);
     }
 
-    //======== VAISSEAU ========
-    metalShader->use();
-    metalShader->setMat4("projection", projection);
-    metalShader->setMat4("view", view);
-    metalShader->setVec3("lightPos", lightPosition);
-    metalShader->setVec3("viewPos", camera.Position);
+    // Obtenir les shaders depuis le gestionnaire global
+    Shader* metalShader = ShaderManager::getInstance().GetMetalShader();
+    Shader* texturedShader = ShaderManager::getInstance().GetTexturedShader();
+    Shader* sunShader = ShaderManager::getInstance().GetSunShader();
+    Shader* currentLightingShader = ShaderManager::getInstance().GetCurrentLightingShader();    //======== VAISSEAU (utilise le shader d'éclairage sélectionné pour voir la différence) ========
+    if (currentLightingShader && g_uboManager) {
+        currentLightingShader->use();
+        
+        glm::mat4 model = glm::mat4(1.0f);
+        g_uboManager->UpdateTransformUBO(model);
+        
+        // Couleur gris métallique pour bien voir les effets d'éclairage
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.7f, 0.7f, 0.8f));
+        myModel->Draw(*currentLightingShader);
+    }
 
-    glm::mat4 model = glm::mat4(1.0f);
-    metalShader->setMat4("model", model);
-    myModel->Draw(*metalShader);
+    //======== LUNE (utilise le shader texturé avec UBO) ========
+    if (texturedShader && g_uboManager) {
+        texturedShader->use();
 
-    //======== LUNE ========
-    texturedShader->use();
-    texturedShader->setMat4("projection", projection);
-    texturedShader->setMat4("view", view);
-    texturedShader->setVec3("lightPos", lightPosition);
-    texturedShader->setVec3("viewPos", camera.Position);
+        // Orbite de la lune
+        float orbitAngle = currentFrame * luneOrbitSpeed;
+        float sphereX = luneOrbitRadius * cos(orbitAngle);
+        float sphereZ = luneOrbitRadius * sin(orbitAngle);
 
-    // Orbite de la lune
-    float orbitAngle = currentFrame * luneOrbitSpeed;
-    float sphereX = luneOrbitRadius * cos(orbitAngle);
-    float sphereZ = luneOrbitRadius * sin(orbitAngle);
+        glm::mat4 sphereModel = glm::mat4(1.0f);
+        sphereModel = glm::translate(sphereModel, glm::vec3(sphereX, 2.0f, sphereZ));
+        sphereModel = glm::rotate(sphereModel, currentFrame * luneSelfRotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
+        g_uboManager->UpdateTransformUBO(sphereModel);
+        
+        moonSphere->Draw(*texturedShader);
+    }
 
-    glm::mat4 sphereModel = glm::mat4(1.0f);
-    sphereModel = glm::translate(sphereModel, glm::vec3(sphereX, 2.0f, sphereZ));
-    sphereModel = glm::rotate(sphereModel, currentFrame * luneSelfRotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
-    texturedShader->setMat4("model", sphereModel);
-    moonSphere->Draw(*texturedShader);
+    //======== SOLEIL (utilise son shader spécialisé) ========
+    if (sunShader && g_uboManager) {
+        sunShader->use();
+        sunShader->setFloat("time", currentFrame);
 
-    //======== SOLEIL ========
-    sunShader->use();
-    sunShader->setMat4("projection", projection);
-    sunShader->setMat4("view", view);
-    sunShader->setFloat("time", currentFrame);
+        glm::mat4 sunModel = glm::mat4(1.0f);
+        sunModel = glm::translate(sunModel, lightPosition);
+        g_uboManager->UpdateTransformUBO(sunModel);
+        
+        sunSphere->Draw(*sunShader);
+    }    //======== ASTEROIDS (utilisent le shader d'éclairage sélectionné) ========
+    if (currentLightingShader && g_uboManager) {
+        float asteroidOrbitAngle = currentFrame * 0.5f;
+        float asteroidOrbitRadius = 60.0f;
 
-    glm::mat4 sunModel = glm::mat4(1.0f);
-    sunModel = glm::translate(sunModel, lightPosition);
-    sunShader->setMat4("model", sunModel);
-    sunSphere->Draw(*sunShader);
+        // Astéroïde 1 - Couleur rouge
+        currentLightingShader->use();
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.8f, 0.3f, 0.2f)); // Rouge
+        float inclinationAngle = glm::radians(15.0f);
+        glm::mat4 inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroidPosition = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle)
+        );
+        glm::vec4 inclinedPosition = inclinationMatrix * glm::vec4(asteroidPosition, 1.0f);
 
-    //======== ASTEROIDS ========
-    phongShader->use();
-    phongShader->setVec3("lightPos", lightPosition);
-    phongShader->setVec3("viewPos", camera.Position);
-    phongShader->setMat4("projection", projection);
-    phongShader->setMat4("view", view);
+        glm::mat4 asteroidModel = glm::mat4(1.0f);
+        asteroidModel = glm::translate(asteroidModel, glm::vec3(lightPosition.x + inclinedPosition.x,
+                                                               lightPosition.y + inclinedPosition.y,
+                                                               lightPosition.z + inclinedPosition.z));
+        asteroidModel = glm::scale(asteroidModel, glm::vec3(0.05f, 0.05f, 0.05f));
+        asteroidModel = glm::rotate(asteroidModel, asteroidOrbitAngle * 10.0f, glm::vec3(0.0f, 1.0f, 0.5f));
+        g_uboManager->UpdateTransformUBO(asteroidModel);
+        asteroid1->Draw(*currentLightingShader);
 
-    float asteroidOrbitAngle = currentFrame * 0.5f;
-    float asteroidOrbitRadius = 60.0f;
+        // Astéroïde 2 - Couleur bleue
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.2f, 0.4f, 0.8f)); // Bleu
+        inclinationAngle = glm::radians(11.0f);
+        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroid2Position = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(10.0f)),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(10.0f))
+        );
+        glm::vec4 inclinedPosition2 = inclinationMatrix * glm::vec4(asteroid2Position, 1.0f);
 
-    // Astéroïde 1
-    float inclinationAngle = glm::radians(15.0f);
-    glm::mat4 inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 asteroidPosition = glm::vec3(
-        asteroidOrbitRadius * cos(asteroidOrbitAngle),
-        0.0f,
-        asteroidOrbitRadius * sin(asteroidOrbitAngle)
-    );
-    glm::vec4 inclinedPosition = inclinationMatrix * glm::vec4(asteroidPosition, 1.0f);
+        glm::mat4 asteroid2Model = glm::mat4(1.0f);
+        asteroid2Model = glm::translate(asteroid2Model, glm::vec3(lightPosition.x + inclinedPosition2.x,
+                                                                 lightPosition.y + inclinedPosition2.y,
+                                                                 lightPosition.z + inclinedPosition2.z));
+        asteroid2Model = glm::scale(asteroid2Model, glm::vec3(0.025f, 0.042f, 0.015f));
+        asteroid2Model = glm::rotate(asteroid2Model, asteroidOrbitAngle * 7.0f, glm::vec3(0.5f, 1.0f, 0.0f));
+        g_uboManager->UpdateTransformUBO(asteroid2Model);        asteroid2->Draw(*currentLightingShader);
 
-    glm::mat4 asteroidModel = glm::mat4(1.0f);
-    asteroidModel = glm::translate(asteroidModel, glm::vec3(lightPosition.x + inclinedPosition.x,
-                                                           lightPosition.y + inclinedPosition.y,
-                                                           lightPosition.z + inclinedPosition.z));
-    asteroidModel = glm::scale(asteroidModel, glm::vec3(0.05f, 0.05f, 0.05f));
-    asteroidModel = glm::rotate(asteroidModel, asteroidOrbitAngle * 10.0f, glm::vec3(0.0f, 1.0f, 0.5f));
-    phongShader->setMat4("model", asteroidModel);
-    asteroid1->Draw(*phongShader);
+        // Astéroïde 3 - Couleur jaune
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.8f, 0.8f, 0.2f)); // Jaune
+        
+        // Astéroïde 3
+        inclinationAngle = glm::radians(0.0f);
+        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroid3Position = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(15.0f)),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(15.0f))
+        );
+        glm::vec4 inclinedPosition3 = inclinationMatrix * glm::vec4(asteroid3Position, 1.0f);
 
-    // Astéroïde 2
-    inclinationAngle = glm::radians(11.0f);
-    inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 asteroid2Position = glm::vec3(
-        asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(10.0f)),
-        0.0f,
-        asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(10.0f))
-    );
-    glm::vec4 inclinedPosition2 = inclinationMatrix * glm::vec4(asteroid2Position, 1.0f);
+        glm::mat4 asteroid3Model = glm::mat4(1.0f);
+        asteroid3Model = glm::translate(asteroid3Model, glm::vec3(lightPosition.x + inclinedPosition3.x,
+                                                                 lightPosition.y + inclinedPosition3.y,
+                                                                 lightPosition.z + inclinedPosition3.z));
+        asteroid3Model = glm::scale(asteroid3Model, glm::vec3(0.08f, 0.08f, 0.08f));
+        asteroid3Model = glm::rotate(asteroid3Model, asteroidOrbitAngle * 12.0f, glm::vec3(1.0f, 0.0f, 1.0f));
+        g_uboManager->UpdateTransformUBO(asteroid3Model);
+        asteroid3->Draw(*currentLightingShader);
 
-    glm::mat4 asteroid2Model = glm::mat4(1.0f);
-    asteroid2Model = glm::translate(asteroid2Model, glm::vec3(lightPosition.x + inclinedPosition2.x,
-                                                             lightPosition.y + inclinedPosition2.y,
-                                                             lightPosition.z + inclinedPosition2.z));
-    asteroid2Model = glm::scale(asteroid2Model, glm::vec3(0.025f, 0.042f, 0.015f));
-    asteroid2Model = glm::rotate(asteroid2Model, asteroidOrbitAngle * 7.0f, glm::vec3(0.5f, 1.0f, 0.0f));
-    phongShader->setMat4("model", asteroid2Model);
-    asteroid2->Draw(*phongShader);
+        // Astéroïde 4 - Couleur violette
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.6f, 0.2f, 0.8f)); // Violet
+        inclinationAngle = glm::radians(8.0f);
+        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 asteroid4Position = glm::vec3(
+            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(25.0f)),
+            0.0f,
+            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(25.0f))
+        );
+        glm::vec4 inclinedPosition4 = inclinationMatrix * glm::vec4(asteroid4Position, 1.0f);
 
-    // Astéroïde 3
-    inclinationAngle = glm::radians(0.0f);
-    inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 asteroid3Position = glm::vec3(
-        asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(15.0f)),
-        0.0f,
-        asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(15.0f))
-    );
-    glm::vec4 inclinedPosition3 = inclinationMatrix * glm::vec4(asteroid3Position, 1.0f);
+        glm::mat4 asteroid4Model = glm::mat4(1.0f);
+        asteroid4Model = glm::translate(asteroid4Model, glm::vec3(lightPosition.x + inclinedPosition4.x,
+                                                                 lightPosition.y + inclinedPosition4.y,
+                                                                 lightPosition.z + inclinedPosition4.z));
+        asteroid4Model = glm::scale(asteroid4Model, glm::vec3(0.012f, 0.014f, 0.013f));
+        asteroid4Model = glm::rotate(asteroid4Model, asteroidOrbitAngle * 5.0f, glm::vec3(0.3f, 0.7f, 0.2f));
+        g_uboManager->UpdateTransformUBO(asteroid4Model);
+        asteroid4->Draw(*currentLightingShader);
+    }
 
-    glm::mat4 asteroid3Model = glm::mat4(1.0f);
-    asteroid3Model = glm::translate(asteroid3Model, glm::vec3(lightPosition.x + inclinedPosition3.x,
-                                                             lightPosition.y + inclinedPosition3.y,
-                                                             lightPosition.z + inclinedPosition3.z));
-    asteroid3Model = glm::scale(asteroid3Model, glm::vec3(0.08f, 0.08f, 0.08f));
-    asteroid3Model = glm::rotate(asteroid3Model, asteroidOrbitAngle * 12.0f, glm::vec3(1.0f, 0.0f, 1.0f));
-    phongShader->setMat4("model", asteroid3Model);
-    asteroid3->Draw(*phongShader);
+    //======== SPHÈRE DE TEST (pour comparer Phong vs Lambert) ========
+    if (currentLightingShader && g_uboManager) {
+        currentLightingShader->use();
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.2f, 0.8f, 0.2f)); // Couleur verte
 
-    // Astéroïde 4
-    inclinationAngle = glm::radians(8.0f);
-    inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::vec3 asteroid4Position = glm::vec3(
-        asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(25.0f)),
-        0.0f,
-        asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(25.0f))
-    );
-    glm::vec4 inclinedPosition4 = inclinationMatrix * glm::vec4(asteroid4Position, 1.0f);
-
-    glm::mat4 asteroid4Model = glm::mat4(1.0f);
-    asteroid4Model = glm::translate(asteroid4Model, glm::vec3(lightPosition.x + inclinedPosition4.x,
-                                                             lightPosition.y + inclinedPosition4.y,
-                                                             lightPosition.z + inclinedPosition4.z));
-    asteroid4Model = glm::scale(asteroid4Model, glm::vec3(0.012f, 0.014f, 0.013f));
-    asteroid4Model = glm::rotate(asteroid4Model, asteroidOrbitAngle * 5.0f, glm::vec3(0.3f, 0.7f, 0.2f));
-    phongShader->setMat4("model", asteroid4Model);
-    asteroid4->Draw(*phongShader);
+        // Positionner la sphère de test à côté du vaisseau
+        glm::mat4 testModel = glm::mat4(1.0f);
+        testModel = glm::translate(testModel, glm::vec3(5.0f, 0.0f, 0.0f)); // À droite du vaisseau
+        g_uboManager->UpdateTransformUBO(testModel);
+        testSphere->Draw(*currentLightingShader);
+    }
 }
 
 void MainScene::Cleanup() {
     if (ambientSource) {
         ambientSource->Stop();
-    }
-
-    // Les smart pointers se nettoient automatiquement
-    simpleShader.reset();
-    phongShader.reset();
-    texturedShader.reset();
-    sunShader.reset();
-    metalShader.reset();
-
+    }    // Les modèles 3D se nettoient automatiquement avec les smart pointers
     myModel.reset();
     asteroid1.reset();
     asteroid2.reset();
     asteroid3.reset();
     asteroid4.reset();
+
+    moonSphere.reset();
+    sunSphere.reset();
+    testSphere.reset();
 
     moonSphere.reset();
     sunSphere.reset();

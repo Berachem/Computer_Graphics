@@ -21,23 +21,17 @@
  */
 class MainScene : public Scene {
 private:
-    // === Shaders ===
-    std::unique_ptr<Shader> simpleShader;
-    std::unique_ptr<Shader> phongShader;
-    std::unique_ptr<Shader> texturedShader;
-    std::unique_ptr<Shader> sunShader;
-    std::unique_ptr<Shader> metalShader;
+    // Les shaders sont maintenant gérés par le ShaderManager global
 
     // === Modèles 3D ===
     std::unique_ptr<Model> myModel;
     std::unique_ptr<Model> asteroid1;
     std::unique_ptr<Model> asteroid2;
     std::unique_ptr<Model> asteroid3;
-    std::unique_ptr<Model> asteroid4;
-
-    // === Sphères ===
+    std::unique_ptr<Model> asteroid4;    // === Sphères ===
     std::unique_ptr<Sphere> moonSphere;
     std::unique_ptr<Sphere> sunSphere;
+    std::unique_ptr<Sphere> testSphere; // Sphère de test pour comparer les shaders
 
     // === Audio (mutualisé via SoundManager) ===
     std::shared_ptr<Sound> zooSound;

@@ -2,6 +2,8 @@
 #include "UIHelpers.h"
 #include "AudioSource.h"
 #include "Sound.h"
+#include "ShaderManager.h"
+#include "UBO.h"
 #include "imgui.h"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
@@ -57,23 +59,22 @@ bool LightScene::Initialize(Camera& camera, SoundManager& soundManager) {
 }
 
 bool LightScene::LoadShaders() {
-    try {
-        // Utiliser le shader du soleil pour la source de lumière
-        lightShader = std::make_unique<Shader>("../shaders/sun.vert", "../shaders/sun.frag");
-        return true;
-    } catch (const std::exception& e) {
-        std::cerr << "Erreur lors du chargement des shaders LightScene : " << e.what() << std::endl;
-        return false;
-    }
+    // Les shaders sont maintenant gérés par le ShaderManager global
+    std::cout << "LightScene: Utilisation du ShaderManager global" << std::endl;
+    return true;
 }
 
 bool LightScene::CreateLightSphere() {
     try {
         // Créer une sphère simple sans texture pour représenter la lumière
         lightSphere = std::make_unique<Sphere>("", lightRadius, 32, 16);
+        
+        // Ajouter une sphère de test pour comparer les shaders d'éclairage
+        testSphere = std::make_unique<Sphere>("", 3.0f, 32, 16);
+        
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de la création de la sphère de lumière : " << e.what() << std::endl;
+        std::cerr << "Erreur lors de la création des sphères : " << e.what() << std::endl;
         return false;
     }
 }
@@ -98,25 +99,36 @@ void LightScene::Render(Camera& camera, int screenWidth, int screenHeight) {
 }
 
 void LightScene::RenderLight(Camera& camera, int screenWidth, int screenHeight) {
-    // Matrices de projection et de vue
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 
-                                          (float)screenWidth / (float)screenHeight, 
-                                          0.1f, 100.0f);
-    glm::mat4 view = camera.GetViewMatrix();
+    // Obtenir le shader du soleil depuis le gestionnaire global
+    Shader* sunShader = ShaderManager::getInstance().GetSunShader();
+    
+    if (!sunShader || !g_uboManager) return;
 
     // Rendu de la sphère de lumière
-    lightShader->use();
-    lightShader->setMat4("projection", projection);
-    lightShader->setMat4("view", view);
-    lightShader->setFloat("time", static_cast<float>(glfwGetTime()));
+    sunShader->use();
+    sunShader->setFloat("time", static_cast<float>(glfwGetTime()));
 
     // Positionner la sphère de lumière
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, lightPosition);
-    lightShader->setMat4("model", model);
+    g_uboManager->UpdateTransformUBO(model);
 
     // Dessiner la sphère
-    lightSphere->Draw(*lightShader);
+    lightSphere->Draw(*sunShader);
+
+    // Rendu de la sphère de test pour comparer les shaders d'éclairage
+    Shader* currentLightingShader = ShaderManager::getInstance().GetCurrentLightingShader();
+    if (currentLightingShader && testSphere) {
+        currentLightingShader->use();
+        currentLightingShader->setVec3("objectColor", glm::vec3(0.8f, 0.3f, 0.1f)); // Couleur orange
+
+        // Positionner la sphère de test à côté de la source de lumière
+        glm::mat4 testModel = glm::mat4(1.0f);
+        testModel = glm::translate(testModel, lightPosition + glm::vec3(10.0f, 0.0f, 0.0f));
+        g_uboManager->UpdateTransformUBO(testModel);
+        
+        testSphere->Draw(*currentLightingShader);
+    }
 }
 
 void LightScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
@@ -147,8 +159,9 @@ void LightScene::OnDeactivate() {
 
 
 void LightScene::Cleanup() {
-    lightShader.reset();
+    // Les shaders sont maintenant gérés par le ShaderManager global
     lightSphere.reset();
+    testSphere.reset();
 
     initialized = false;
     std::cout << "LightScene nettoyée" << std::endl;

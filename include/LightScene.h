@@ -19,11 +19,9 @@ class AudioSource;
  */
 class LightScene : public Scene {
 private:
-    // === Shaders ===
-    std::unique_ptr<Shader> lightShader;
-
-    // === Objets 3D ===
+    // Les shaders sont maintenant gérés par le ShaderManager global    // === Objets 3D ===
     std::unique_ptr<Sphere> lightSphere;
+    std::unique_ptr<Sphere> testSphere; // Sphère de test pour comparer les shaders
     std::unique_ptr<Skybox> skybox;
     SkyboxManager::SkyboxType currentSkyboxType;
 
