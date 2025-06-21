@@ -19,6 +19,13 @@ pacman -S mingw-w64-x86_64-toolchain \
            mingw-w64-x86_64-openal \
            mingw-w64-x86_64-cmake
 
+# First build 
+mkdir build && cd build
+cmake -G "Unix Makefiles" ..
+make -j 4
+./ProjetOpenGL.exe
+
+# Next builds if needs
 cd ..
 rm -rf build        # supprime l’ancienne build (cache CMake, binaires…)
 mkdir build && cd build
