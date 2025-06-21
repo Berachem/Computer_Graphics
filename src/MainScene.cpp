@@ -14,9 +14,9 @@
 #endif
 
 // Variables pour les animations (extraites de main.cpp)
-static float luneOrbitRadius = 10.0f;
-static float luneOrbitSpeed = 0.25f;
-static float luneSelfRotSpeed = 1.0f;
+static float luneOrbitRadius = 250.0f;    // Lune plus éloignée que les astéroïdes (qui sont à ~60)
+static float luneOrbitSpeed = 0.50f;     // Vitesse plus lente pour une orbite plus lointaine
+static float luneSelfRotSpeed = 0.5f;
 static float sunDistance = 100.0f;
 static glm::vec3 lightPosition = glm::vec3(-100.0f, 15.0f, -100.0f);
 
@@ -77,15 +77,11 @@ bool MainScene::LoadModels() {
         
         // Charger un seul modèle d'astéroïde (réutilisé pour tout l'anneau)
         asteroidModel = std::make_unique<Model>("../models/astroid.obj");
-        
-        // Initialiser l'anneau d'astéroïdes avec des propriétés variées
+          // Initialiser l'anneau d'astéroïdes avec des propriétés variées
         InitializeAsteroidRing();
         
-        moonSphere = std::make_unique<Sphere>("../textures/spherical_moon_texture.jpg", 0.5f, 36, 18);
+        moonSphere = std::make_unique<Sphere>("../textures/spherical_moon_texture.jpg", 9.0f, 36, 18); // Lune très imposante (x3)
         sunSphere = std::make_unique<Sphere>("", sunRadius, 36, 18);
-        
-        // Ajouter une sphère de test simple pour comparer les shaders d'éclairage
-        testSphere = std::make_unique<Sphere>("", 2.0f, 32, 16);
         
         return true;
     } catch (const std::exception& e) {
@@ -183,22 +179,29 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
         // Couleur gris métallique pour bien voir les effets d'éclairage
         currentLightingShader->setVec3("objectColor", glm::vec3(0.7f, 0.7f, 0.8f));
         myModel->Draw(*currentLightingShader);
-    }
-
-    //======== LUNE (utilise le shader texturé avec UBO) ========
+    }    //======== LUNE (orbite autour du soleil, plus éloignée que les astéroïdes) ========
     if (texturedShader && g_uboManager) {
         texturedShader->use();
 
-        // Orbite de la lune
+        // Orbite de la lune autour du soleil (plus éloignée que les astéroïdes)
         float orbitAngle = currentFrame * luneOrbitSpeed;
-        float sphereX = luneOrbitRadius * cos(orbitAngle);
-        float sphereZ = luneOrbitRadius * sin(orbitAngle);
-
-        glm::mat4 sphereModel = glm::mat4(1.0f);
-        sphereModel = glm::translate(sphereModel, glm::vec3(sphereX, 2.0f, sphereZ));
-        sphereModel = glm::rotate(sphereModel, currentFrame * luneSelfRotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
-        g_uboManager->UpdateTransformUBO(sphereModel);
+        float moonX = luneOrbitRadius * cos(orbitAngle);
+        float moonZ = luneOrbitRadius * sin(orbitAngle);
         
+        // Légère variation verticale pour donner un aspect plus naturel
+        float moonY = sin(orbitAngle * 0.7f) * 5.0f;
+
+        glm::mat4 moonModel = glm::mat4(1.0f);
+        // Orbiter autour du soleil (lightPosition)
+        moonModel = glm::translate(moonModel, glm::vec3(
+            lightPosition.x + moonX, 
+            lightPosition.y + moonY, 
+            lightPosition.z + moonZ
+        ));
+        // Rotation propre de la lune (synchronisée avec son orbite comme la vraie Lune)
+        moonModel = glm::rotate(moonModel, orbitAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+        
+        g_uboManager->UpdateTransformUBO(moonModel);
         moonSphere->Draw(*texturedShader);
     }
 
@@ -271,8 +274,7 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
             asteroidModel = glm::rotate(asteroidModel, secondaryRotation, secondaryAxis);
             
             g_uboManager->UpdateTransformUBO(asteroidModel);
-            this->asteroidModel->Draw(*currentLightingShader);
-        }
+            this->asteroidModel->Draw(*currentLightingShader);        }
         
         // Afficher des informations de debug occasionnelles
         static int frameCounter = 0;
@@ -281,32 +283,17 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
             std::cout << "Anneau d'astéroïdes : " << ASTEROID_COUNT << " astéroïdes en orbite" << std::endl;
         }
     }
-
-    //======== SPHÈRE DE TEST (pour comparer Phong vs Lambert) ========
-    if (currentLightingShader && g_uboManager) {
-        currentLightingShader->use();
-        currentLightingShader->setVec3("objectColor", glm::vec3(0.2f, 0.8f, 0.2f)); // Couleur verte
-
-        // Positionner la sphère de test à côté du vaisseau
-        glm::mat4 testModel = glm::mat4(1.0f);
-        testModel = glm::translate(testModel, glm::vec3(5.0f, 0.0f, 0.0f)); // À droite du vaisseau
-        g_uboManager->UpdateTransformUBO(testModel);
-        testSphere->Draw(*currentLightingShader);
-    }
 }
 
 void MainScene::Cleanup() {
     if (ambientSource) {
         ambientSource->Stop();
-    }
-
-    // Les modèles 3D se nettoient automatiquement avec les smart pointers
+    }    // Les modèles 3D se nettoient automatiquement avec les smart pointers
     myModel.reset();
     asteroidModel.reset(); // Un seul modèle d'astéroïde maintenant
 
     moonSphere.reset();
     sunSphere.reset();
-    testSphere.reset();
 
     initialized = false;
     std::cout << "MainScene nettoyée" << std::endl;

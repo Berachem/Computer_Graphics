@@ -5,6 +5,7 @@
 #include "Shader.h"
 #include "Model.h"
 #include "Sphere.h"
+#include "Camera.h"
 #include "AudioSource.h"
 #include "Sound.h"
 #include "UIHelpers.h"
@@ -37,10 +38,9 @@ private:
         float orbitSpeed;      // Vitesse orbitale
     };
     
-    AsteroidData asteroids[ASTEROID_COUNT];// === Sphères ===
+    AsteroidData asteroids[ASTEROID_COUNT];    // === Sphères ===
     std::unique_ptr<Sphere> moonSphere;
     std::unique_ptr<Sphere> sunSphere;
-    std::unique_ptr<Sphere> testSphere; // Sphère de test pour comparer les shaders
 
     // === Audio (mutualisé via SoundManager) ===
     std::shared_ptr<Sound> zooSound;
