@@ -9,20 +9,17 @@
 #include "Shader.h"
 #include "tiny_obj_loader.h"
 
-class Model
-{
-public:
-    // Données
+// Modèle 3D chargé depuis un fichier OBJ
+class Model {
+  public:
     std::vector<Mesh> meshes;
     std::string directory;
 
-    // Constructeur
     Model(const std::string &path);
 
-    // Afficher le modèle
     void Draw(const Shader &shader) const;
 
-private:
+  private:
     void loadModel(const std::string &path);
     Mesh processMesh(const tinyobj::attrib_t &attrib, const tinyobj::shape_t &shape, const std::vector<tinyobj::material_t> &materials);
 };

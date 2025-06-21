@@ -2,71 +2,34 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-// Instance globale du gestionnaire UBO
 UBOManager* g_uboManager = nullptr;
 
-UBOManager::UBOManager() 
-    : cameraUBO(0), transformUBO(0), lightingUBO(0), initialized(false) {
-}
-
-UBOManager::~UBOManager() {
-    Cleanup();
-}
+UBOManager::UBOManager() : cameraUBO(0), transformUBO(0), lightingUBO(0), initialized(false) {}
+UBOManager::~UBOManager() { Cleanup(); }
 
 bool UBOManager::Initialize() {
-    if (initialized) {
-        return true;
-    }
-    
-    std::cout << "Initialisation du système UBO..." << std::endl;
+    if (initialized) return true;
     
     // Créer les UBOs
-    if (!CreateUBO(cameraUBO, sizeof(CameraUBO), CAMERA_UBO_BINDING)) {
-        std::cerr << "Erreur: échec de création du Camera UBO" << std::endl;
-        return false;
-    }
-    
-    if (!CreateUBO(transformUBO, sizeof(TransformUBO), TRANSFORM_UBO_BINDING)) {
-        std::cerr << "Erreur: échec de création du Transform UBO" << std::endl;
-        return false;
-    }
-    
-    if (!CreateUBO(lightingUBO, sizeof(LightingUBO), LIGHTING_UBO_BINDING)) {
-        std::cerr << "Erreur: échec de création du Lighting UBO" << std::endl;
-        return false;
-    }
+    if (!CreateUBO(cameraUBO, sizeof(CameraUBO), CAMERA_UBO_BINDING)) return false;
+    if (!CreateUBO(transformUBO, sizeof(TransformUBO), TRANSFORM_UBO_BINDING)) return false;
+    if (!CreateUBO(lightingUBO, sizeof(LightingUBO), LIGHTING_UBO_BINDING)) return false;
     
     initialized = true;
-    std::cout << "Système UBO initialisé avec succès" << std::endl;
-    std::cout << "- Camera UBO: " << cameraUBO << " (binding " << CAMERA_UBO_BINDING << ")" << std::endl;
-    std::cout << "- Transform UBO: " << transformUBO << " (binding " << TRANSFORM_UBO_BINDING << ")" << std::endl;
-    std::cout << "- Lighting UBO: " << lightingUBO << " (binding " << LIGHTING_UBO_BINDING << ")" << std::endl;
     
     return true;
 }
 
 void UBOManager::Cleanup() {
-    if (cameraUBO != 0) {
-        glDeleteBuffers(1, &cameraUBO);
-        cameraUBO = 0;
-    }
-    if (transformUBO != 0) {
-        glDeleteBuffers(1, &transformUBO);
-        transformUBO = 0;
-    }
-    if (lightingUBO != 0) {
-        glDeleteBuffers(1, &lightingUBO);
-        lightingUBO = 0;
-    }
+    if (cameraUBO != 0) { glDeleteBuffers(1, &cameraUBO); cameraUBO = 0; }
+    if (transformUBO != 0) { glDeleteBuffers(1, &transformUBO); transformUBO = 0; }
+    if (lightingUBO != 0) { glDeleteBuffers(1, &lightingUBO); lightingUBO = 0; }
     initialized = false;
-    std::cout << "UBOs nettoyés" << std::endl;
 }
 
 bool UBOManager::CreateUBO(GLuint& ubo, size_t size, GLuint bindingPoint) {
     glGenBuffers(1, &ubo);
-    if (ubo == 0) {
-        return false;
-    }
+    if (ubo == 0) return false;
     
     glBindBuffer(GL_UNIFORM_BUFFER, ubo);
     glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
@@ -75,10 +38,7 @@ bool UBOManager::CreateUBO(GLuint& ubo, size_t size, GLuint bindingPoint) {
     
     // Vérifier les erreurs OpenGL
     GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "Erreur OpenGL lors de la création de l'UBO: " << error << std::endl;
-        return false;
-    }
+    if (error != GL_NO_ERROR) return false;
     
     return true;
 }
@@ -145,17 +105,11 @@ void UBOManager::BindShaderToUBOs(GLuint shaderProgram) {
     
     // Lier les blocs uniformes aux points de liaison
     GLuint cameraBlockIndex = glGetUniformBlockIndex(shaderProgram, "CameraUBO");
-    if (cameraBlockIndex != GL_INVALID_INDEX) {
-        glUniformBlockBinding(shaderProgram, cameraBlockIndex, CAMERA_UBO_BINDING);
-    }
+    if (cameraBlockIndex != GL_INVALID_INDEX) glUniformBlockBinding(shaderProgram, cameraBlockIndex, CAMERA_UBO_BINDING);
     
     GLuint transformBlockIndex = glGetUniformBlockIndex(shaderProgram, "TransformUBO");
-    if (transformBlockIndex != GL_INVALID_INDEX) {
-        glUniformBlockBinding(shaderProgram, transformBlockIndex, TRANSFORM_UBO_BINDING);
-    }
+    if (transformBlockIndex != GL_INVALID_INDEX) glUniformBlockBinding(shaderProgram, transformBlockIndex, TRANSFORM_UBO_BINDING);
     
     GLuint lightingBlockIndex = glGetUniformBlockIndex(shaderProgram, "LightingUBO");
-    if (lightingBlockIndex != GL_INVALID_INDEX) {
-        glUniformBlockBinding(shaderProgram, lightingBlockIndex, LIGHTING_UBO_BINDING);
-    }
+    if (lightingBlockIndex != GL_INVALID_INDEX) glUniformBlockBinding(shaderProgram, lightingBlockIndex, LIGHTING_UBO_BINDING);
 }

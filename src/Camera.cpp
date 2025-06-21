@@ -11,13 +11,11 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     updateCameraVectors();
 }
 
-glm::mat4 Camera::GetViewMatrix() const
-{
+glm::mat4 Camera::GetViewMatrix() const {
     return glm::lookAt(Position, Position + Front, Up);
 }
 
-void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
-{
+void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {
     float velocity = MovementSpeed * deltaTime;
     if (direction == FORWARD)
         Position += Front * velocity;
@@ -33,29 +31,21 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
         Position -= Up * velocity;
 }
 
-void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
-{
+void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch) {
     xoffset *= MouseSensitivity;
     yoffset *= MouseSensitivity;
-
     Yaw += xoffset;
     Pitch += yoffset;
-
-    // Limiter l'inclinaison
-    if (constrainPitch)
-    {
+    if (constrainPitch) {
         if (Pitch > 89.0f)
             Pitch = 89.0f;
         if (Pitch < -89.0f)
             Pitch = -89.0f;
     }
-
-    // Mettre à jour les vecteurs
     updateCameraVectors();
 }
 
-void Camera::ProcessMouseScroll(float yoffset)
-{
+void Camera::ProcessMouseScroll(float yoffset) {
     Zoom -= yoffset;
     if (Zoom < 1.0f)
         Zoom = 1.0f;
@@ -63,16 +53,12 @@ void Camera::ProcessMouseScroll(float yoffset)
         Zoom = 45.0f;
 }
 
-void Camera::updateCameraVectors()
-{
-    // Calculer le nouveau vecteur Front
+void Camera::updateCameraVectors() {
     glm::vec3 front;
     front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     front.y = sin(glm::radians(Pitch));
     front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     Front = glm::normalize(front);
-
-    // Recalculer Right et Up
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
 }

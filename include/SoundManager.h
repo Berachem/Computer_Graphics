@@ -17,9 +17,6 @@ class AudioSource;
 
 /**
  * @brief Gestionnaire principal du système audio
- * 
- * Cette classe gère l'initialisation d'OpenAL, les sources audio globales,
- * et fournit une interface centralisée pour la gestion des sons dans la scène 3D.
  */
 class SoundManager {
 public:

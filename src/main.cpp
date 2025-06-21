@@ -1,7 +1,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
@@ -16,8 +15,6 @@
 #include "UBO.h"
 #include "ShaderManager.h"
 #include <glm/gtc/matrix_transform.hpp>
-
-// === ImGui ===
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"

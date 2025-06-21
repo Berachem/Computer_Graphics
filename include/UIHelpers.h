@@ -13,9 +13,11 @@ class AudioSource;
 class ShaderManager;
 enum class LightingShaderType;
 
-namespace UIHelpers {    /**
+namespace UIHelpers {
+    /**
      * @brief Interface audio mutualisée
-     */    void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager,
+     */
+    void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager,
                        std::shared_ptr<AudioSource> source = nullptr,
                        std::shared_ptr<Sound> sound = nullptr,
                        const std::string& currentSoundName = "",
@@ -26,7 +28,7 @@ namespace UIHelpers {    /**
      * @param currentSkyboxType Référence au type de skybox courant
      * @param onSkyboxChange Callback appelé lors du changement de skybox
      */
-    void RenderMainControlsUI(SkyboxManager::SkyboxType& currentSkyboxType, 
+    void RenderMainControlsUI(SkyboxManager::SkyboxType& currentSkyboxType,
                               std::function<void(SkyboxManager::SkyboxType)> onSkyboxChange);
 
     /**

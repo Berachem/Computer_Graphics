@@ -10,12 +10,8 @@ SceneManager::~SceneManager() {
 }
 
 bool SceneManager::Initialize(Camera& camera, SoundManager& soundManager) {
-    if (initialized) {
-        std::cout << "SceneManager déjà initialisé" << std::endl;
-        return true;
-    }
+    if (initialized) return true;
 
-    // Initialiser toutes les scènes ajoutées
     for (auto& scene : scenes) {
         if (!scene->Initialize(camera, soundManager)) {
             std::cerr << "Erreur : échec de l'initialisation de la scène " << scene->GetName() << std::endl;
@@ -23,7 +19,6 @@ bool SceneManager::Initialize(Camera& camera, SoundManager& soundManager) {
         }
     }
 
-    // Si on a des scènes, activer la première
     if (!scenes.empty()) {
         currentSceneIndex = 0;
         scenes[currentSceneIndex]->OnActivate();
@@ -31,7 +26,6 @@ bool SceneManager::Initialize(Camera& camera, SoundManager& soundManager) {
     }
 
     initialized = true;
-    std::cout << "SceneManager initialisé avec " << scenes.size() << " scène(s)" << std::endl;
     return true;
 }
 
@@ -45,15 +39,12 @@ void SceneManager::AddScene(std::unique_ptr<Scene> scene) {
 void SceneManager::NextScene() {
     if (scenes.empty()) return;
 
-    // Désactiver la scène actuelle
     if (currentSceneIndex >= 0) {
         scenes[currentSceneIndex]->OnDeactivate();
     }
 
-    // Passer à la scène suivante (avec bouclage)
     currentSceneIndex = (currentSceneIndex + 1) % scenes.size();
     
-    // Activer la nouvelle scène
     scenes[currentSceneIndex]->OnActivate();
     std::cout << "Changement vers la scène : " << scenes[currentSceneIndex]->GetName() << std::endl;
 }
@@ -61,15 +52,12 @@ void SceneManager::NextScene() {
 void SceneManager::PreviousScene() {
     if (scenes.empty()) return;
 
-    // Désactiver la scène actuelle
     if (currentSceneIndex >= 0) {
         scenes[currentSceneIndex]->OnDeactivate();
     }
 
-    // Passer à la scène précédente (avec bouclage)
     currentSceneIndex = (currentSceneIndex - 1 + scenes.size()) % scenes.size();
     
-    // Activer la nouvelle scène
     scenes[currentSceneIndex]->OnActivate();
     std::cout << "Changement vers la scène : " << scenes[currentSceneIndex]->GetName() << std::endl;
 }
@@ -84,12 +72,10 @@ bool SceneManager::SetCurrentScene(int index) {
         return true; // Déjà sur cette scène
     }
 
-    // Désactiver la scène actuelle
     if (currentSceneIndex >= 0) {
         scenes[currentSceneIndex]->OnDeactivate();
     }
 
-    // Changer vers la nouvelle scène
     currentSceneIndex = index;
     scenes[currentSceneIndex]->OnActivate();
     std::cout << "Changement vers la scène : " << scenes[currentSceneIndex]->GetName() << std::endl;
@@ -148,12 +134,10 @@ bool SceneManager::IsInitialized() const {
 
 void SceneManager::Cleanup() {
     if (initialized) {
-        // Désactiver la scène actuelle
         if (currentSceneIndex >= 0 && currentSceneIndex < static_cast<int>(scenes.size())) {
             scenes[currentSceneIndex]->OnDeactivate();
         }
 
-        // Nettoyer toutes les scènes
         for (auto& scene : scenes) {
             scene->Cleanup();
         }

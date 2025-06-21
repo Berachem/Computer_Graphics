@@ -32,12 +32,9 @@ unsigned int loadTexture(const char* path)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
         stbi_image_free(data);
-        std::cout << "Texture chargée avec succès: " << path << std::endl;
-        std::cout << "Nombre de composantes de l'image: " << nrComponents << std::endl;
     }
     else
     {
-        std::cout << "Erreur lors du chargement de la texture: " << path << std::endl;
         stbi_image_free(data);
     }
     

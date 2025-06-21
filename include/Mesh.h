@@ -6,36 +6,27 @@
 #include <vector>
 #include "Shader.h"
 
-struct Vertex
-{
+struct Vertex {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec2 TexCoords;
 };
 
-struct Texture
-{
+struct Texture {
     unsigned int id;
     std::string type;
     std::string path;
 };
 
-class Mesh
-{
+// Mesh 3D (sommets, indices, textures)
+class Mesh {
 public:
-    // Données
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
-
     unsigned int VAO;
-
-    // Constructeur
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
-
-    // Méthode pour dessiner le mesh
     void Draw(const Shader &shader) const;
-
 private:
     unsigned int VBO, EBO;
     void setupMesh();

@@ -4,11 +4,8 @@
 #include "Shader.h"
 #include <memory>
 
-// Enum pour les types de shaders d'éclairage
-enum class LightingShaderType {
-    PHONG,
-    LAMBERT
-};
+// Gestionnaire global des shaders
+enum class LightingShaderType { PHONG, LAMBERT };
 
 class ShaderManager {
 public:

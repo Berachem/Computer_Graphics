@@ -3,7 +3,7 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-// Skybox cube vertices
+// Sommets du cube de la skybox
 static float skyboxVertices[] = {
     -1.0f,  1.0f, -1.0f,
     -1.0f, -1.0f, -1.0f,
@@ -50,10 +50,10 @@ static float skyboxVertices[] = {
 
 Skybox::Skybox(const std::vector<std::string>& faces)
 {
-    // load cubemap
+    // Chargement de la texture du cubemap
     cubemapTexture = LoadCubemap(faces);
 
-    // skybox VAO
+    // Configuration du VAO de la skybox
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
     glBindVertexArray(skyboxVAO);
@@ -63,7 +63,7 @@ Skybox::Skybox(const std::vector<std::string>& faces)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glBindVertexArray(0);
 
-    // shader
+    // Chargement du shader
     shader = std::make_unique<Shader>("../shaders/skybox.vert", "../shaders/skybox.frag");
     shader->use();
     shader->setInt("skybox", 0);
@@ -71,6 +71,7 @@ Skybox::Skybox(const std::vector<std::string>& faces)
 
 Skybox::~Skybox()
 {
+    // Libération des ressources
     glDeleteVertexArrays(1, &skyboxVAO);
     glDeleteBuffers(1, &skyboxVBO);
     glDeleteTextures(1, &cubemapTexture);

@@ -14,112 +14,72 @@
 #include <memory>
 #include <glm/glm.hpp>
 
-/**
- * @brief Scène principale contenant tous les objets 3D et effets
- * 
- * Cette scène représente la scène complète avec tous les modèles,
- * sphères, effets de lumière et sons d'ambiance.
- */
+// Scène principale avec objets 3D et effets
 class MainScene : public Scene {
-private:    // Les shaders sont maintenant gérés par le ShaderManager global
-
-    // === Anneau d'astéroïdes ===
-    std::unique_ptr<Model> asteroidModel; // Un seul modèle réutilisé
-    static const int ASTEROID_COUNT = 72; // Nombre d'astéroïdes dans l'anneau (plus dense)
-    
+private:
+    std::unique_ptr<Model> asteroidModel;
+    static const int ASTEROID_COUNT = 72;
     struct AsteroidData {
-        float angleOffset;      // Décalage angulaire dans l'anneau
-        float radiusOffset;     // Variation du rayon orbital
-        float scale;           // Échelle de l'astéroïde
-        float rotationSpeed;   // Vitesse de rotation propre
-        glm::vec3 rotationAxis; // Axe de rotation
-        glm::vec3 color;       // Couleur de l'astéroïde
-        float orbitSpeed;      // Vitesse orbitale
+        float angleOffset, radiusOffset, scale, rotationSpeed, orbitSpeed;
+        glm::vec3 rotationAxis, color;
     };
-      AsteroidData asteroids[ASTEROID_COUNT];
-    
-    // === Vaisseaux français ===
+    AsteroidData asteroids[ASTEROID_COUNT];
+
     std::unique_ptr<Model> spaceshipModel;
     static const int SPACESHIP_COUNT = 3;
-      struct SpaceshipData {
-        glm::vec3 color;        // Couleur du vaisseau (bleu, blanc, rouge)
-        float angleOffset;      // Décalage angulaire entre les vaisseaux
-        float orbitRadius;      // Rayon de l'orbite
-        float orbitSpeed;       // Vitesse orbitale
-        float currentAngle;     // Angle actuel dans l'orbite
-        glm::vec3 randomOffset; // Petit décalage aléatoire pour le mouvement
-        float randomPhase;      // Phase pour l'oscillation aléatoire
-        
-        // Paramètres pour mouvements verticaux naturels individuels
-        float heightFreq1, heightFreq2, heightFreq3;    // Fréquences des oscillations verticales
-        float heightAmp1, heightAmp2, heightAmp3;       // Amplitudes des oscillations verticales
-        float heightPhase1, heightPhase2, heightPhase3; // Phases des oscillations verticales
-        
-        // Paramètres pour mouvements horizontaux individuels
-        float horizontalFreq1, horizontalFreq2;         // Fréquences des oscillations horizontales
-        float horizontalAmp1, horizontalAmp2;           // Amplitudes des oscillations horizontales
-        float horizontalPhase1, horizontalPhase2;       // Phases des oscillations horizontales
+    struct SpaceshipData {
+        glm::vec3 color, randomOffset;
+        float angleOffset, orbitRadius, orbitSpeed, currentAngle, randomPhase;
+        float heightFreq1, heightFreq2, heightFreq3;
+        float heightAmp1, heightAmp2, heightAmp3;
+        float heightPhase1, heightPhase2, heightPhase3;
+        float horizontalFreq1, horizontalFreq2;
+        float horizontalAmp1, horizontalAmp2;
+        float horizontalPhase1, horizontalPhase2;
     };
-    
     SpaceshipData spaceships[SPACESHIP_COUNT];
 
-    // === Sphères ===
     std::unique_ptr<Sphere> moonSphere;
-    std::unique_ptr<Sphere> sunSphere;    // === Audio (mutualisé via SoundManager) ===
+    std::unique_ptr<Sphere> sunSphere;
     std::shared_ptr<Sound> zooSound;
     std::shared_ptr<AudioSource> ambientSource;
-    std::string currentSoundName; // Nom du son actuellement chargé
-    // Skybox pour cette scène
+    std::string currentSoundName;
     std::unique_ptr<Skybox> skybox;
-    SkyboxManager::SkyboxType currentSkyboxType;    // === Variables de scène ===
+    SkyboxManager::SkyboxType currentSkyboxType;
     float sunRadius;
     bool initialized;
-    
-    // === Mode pilote ===
     bool pilotMode;
-    int currentSpaceshipIndex; // Index du vaisseau suivi (0, 1, 2)
-    glm::vec3 lastSpaceshipPosition; // Position précédente pour calculer le vecteur de déplacement// === Méthodes privées ===
+    int currentSpaceshipIndex;
+    glm::vec3 lastSpaceshipPosition;
+
+    // Méthodes internes
     bool LoadShaders();
-    bool LoadModels();    bool LoadAudio(SoundManager& soundManager);    void InitializeAsteroidRing();
+    bool LoadModels();
+    bool LoadAudio(SoundManager&);
+    void InitializeAsteroidRing();
     void InitializeSpaceships();
-    void RenderObjects(Camera& camera, int screenWidth, int screenHeight);
-    void ChangeSkybox(SkyboxManager::SkyboxType newType);
-      // === Méthodes pour le mode pilote ===
+    void RenderObjects(Camera&, int, int);
+    void ChangeSkybox(SkyboxManager::SkyboxType);
     void TogglePilotMode();
-    void UpdatePilotCamera(Camera& camera);
-    glm::vec3 GetSpaceshipPosition(int index) const;
+    void UpdatePilotCamera(Camera&);
+    glm::vec3 GetSpaceshipPosition(int) const;
 
 public:
-    /**
-     * @brief Constructeur
-     */
-    MainScene();    // === Méthodes publiques pour le mode pilote ===
+    MainScene();
     bool IsPilotMode() const { return pilotMode; }
-    
-    // === Méthode pour changer le son de la scène ===
-    bool ChangeSceneSound(const std::string& soundName, SoundManager& soundManager);
-      // === Méthode pour obtenir le nom du son actuel ===
+    bool ChangeSceneSound(const std::string&, SoundManager&);
     std::string GetCurrentSoundName() const;
-    
-    // === Méthodes pour accéder à l'audio de la scène ===
     std::shared_ptr<AudioSource> GetAmbientSource() const { return ambientSource; }
     std::shared_ptr<Sound> GetAmbientSound() const { return zooSound; }
-
-    /**
-     * @brief Destructeur
-     */
     virtual ~MainScene();
-
-    // === Méthodes héritées de Scene ===
-    virtual bool Initialize(Camera& camera, SoundManager& soundManager) override;
-    virtual void Update(float deltaTime, GLFWwindow* window, Camera& camera, SoundManager& soundManager) override;
-    virtual void Render(Camera& camera, int screenWidth, int screenHeight) override;
-    virtual void RenderUI(GLFWwindow* window, SoundManager& soundManager) override;
-    virtual void Cleanup() override;    virtual const char* GetName() const override;
+    virtual bool Initialize(Camera&, SoundManager&) override;
+    virtual void Update(float, GLFWwindow*, Camera&, SoundManager&) override;
+    virtual void Render(Camera&, int, int) override;
+    virtual void RenderUI(GLFWwindow*, SoundManager&) override;
+    virtual void Cleanup() override;
+    virtual const char* GetName() const override;
     virtual void OnActivate() override;
     virtual void OnDeactivate() override;
-    
-    // === Méthode pour positionner la caméra ===
     void SetupCameraOverview(Camera& camera);
 };
 

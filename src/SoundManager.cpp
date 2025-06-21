@@ -46,7 +46,6 @@ SoundManager::~SoundManager() {
 
 bool SoundManager::Initialize() {
     if (m_initialized) {
-        std::cout << "SoundManager: Déjà initialisé" << std::endl;
         return true;
     }
 

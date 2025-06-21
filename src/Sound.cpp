@@ -6,13 +6,11 @@
 #include <cstdint>
 
 #ifndef HAVE_OPENAL
-// Définitions factices pour compiler sans OpenAL
 #define AL_NO_ERROR 0
 #define AL_INVALID_NAME 1
 #define AL_INVALID_ENUM 2
 #define AL_INVALID_VALUE 3
 #define AL_INVALID_OPERATION 4
-#define AL_OUT_OF_MEMORY 5
 #define AL_FORMAT_MONO8 1
 #define AL_FORMAT_MONO16 2
 #define AL_FORMAT_STEREO8 3
@@ -25,23 +23,13 @@ inline void alDeleteBuffers(int, const unsigned int*) {}
 inline void alBufferData(unsigned int, int, const void*, int, int) {}
 #endif
 
-
-
-Sound::Sound()
-    : m_bufferID(0)
-    , m_duration(0.0f)
-    , m_channels(0)
-    , m_sampleRate(0)
-    , m_bitsPerSample(0)
-{
-}
+Sound::Sound() : m_bufferID(0), m_duration(0.0f), m_channels(0), m_sampleRate(0), m_bitsPerSample(0) {}
 
 Sound::~Sound() {
     Unload();
 }
 
 bool Sound::LoadFromFile(const std::string& filePath) {
-    // Extraire l'extension du fichier
     size_t dotPos = filePath.find_last_of('.');
     if (dotPos == std::string::npos) {
         std::cerr << "Sound: Impossible de déterminer le format du fichier '" << filePath << "'" << std::endl;
@@ -133,8 +121,6 @@ void Sound::Unload() {
     m_bitsPerSample = 0;
     m_fileName.clear();
 }
-
-
 
 bool Sound::LoadWAV(const std::string& filePath) {
     std::ifstream file(filePath, std::ios::binary);

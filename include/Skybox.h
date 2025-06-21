@@ -8,13 +8,12 @@
 #include <memory>
 #include "Shader.h"
 
+// Skybox cubemap
 class Skybox {
 public:
-    // Constructeur : charge les faces et initialise le VAO/VBO
     Skybox(const std::vector<std::string>& faces);
     ~Skybox();
 
-    // Render : view should have translation removed, projection usual
     void Render(const glm::mat4& view, const glm::mat4& projection);
 
 private:
@@ -22,7 +21,6 @@ private:
     unsigned int cubemapTexture;
     std::unique_ptr<Shader> shader;
 
-    // Charge une cubemap à partir des 6 faces
     unsigned int LoadCubemap(const std::vector<std::string>& faces);
 };
 
