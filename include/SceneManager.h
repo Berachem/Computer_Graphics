@@ -107,6 +107,12 @@ public:
     const char* GetCurrentSceneName() const;
 
     /**
+     * @brief Retourne un pointeur vers la scène actuelle
+     * @return Pointeur vers la scène actuelle, nullptr si pas de scène
+     */
+    Scene* GetCurrentScene() const;
+
+    /**
      * @brief Vérifie si le gestionnaire est initialisé
      * @return true si initialisé, false sinon
      */

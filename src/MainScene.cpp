@@ -21,7 +21,7 @@ static float sunDistance = 100.0f;
 static glm::vec3 lightPosition = glm::vec3(-100.0f, 15.0f, -100.0f);
 
 MainScene::MainScene() 
-    : sunRadius(45.0f), initialized(false) {
+    : sunRadius(45.0f), initialized(false), pilotMode(false), currentSpaceshipIndex(0), lastSpaceshipPosition(0.0f) {
 }
 
 MainScene::~MainScene() {
@@ -107,13 +107,26 @@ bool MainScene::LoadAudio(SoundManager& soundManager) {
 void MainScene::Update(float deltaTime, GLFWwindow* window, Camera& camera, SoundManager& soundManager) {
     if (!initialized) return;
 
+    // Gestion de la touche V pour basculer le mode pilote
+    static bool vKeyPressed = false;
+    bool vKeyDown = (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS);
+    if (vKeyDown && !vKeyPressed) {
+        TogglePilotMode();
+        std::cout << "Mode pilote " << (pilotMode ? "activé" : "désactivé") << std::endl;
+        if (pilotMode) {
+            std::cout << "Suivi du vaisseau " << (currentSpaceshipIndex + 1) << " (couleur: " 
+                      << (currentSpaceshipIndex == 0 ? "Bleu" : currentSpaceshipIndex == 1 ? "Blanc" : "Rouge") << ")" << std::endl;
+        }
+    }
+    vKeyPressed = vKeyDown;
+
     // Mettre à jour la position de l'auditeur avec la caméra
     if (soundManager.IsInitialized()) {
         float listenerPos[3] = {camera.Position.x, camera.Position.y, camera.Position.z};
         float listenerForward[3] = {camera.Front.x, camera.Front.y, camera.Front.z};
         float listenerUp[3] = {camera.Up.x, camera.Up.y, camera.Up.z};
         soundManager.SetListenerPosition(listenerPos, listenerForward, listenerUp);
-    }    // Mettre à jour la position du soleil (rotation lente)
+    }// Mettre à jour la position du soleil (rotation lente)
     float currentFrame = static_cast<float>(glfwGetTime());
     float angle = currentFrame * 0.0005f;
     lightPosition.x = -sunDistance * cos(angle);
@@ -150,13 +163,17 @@ void MainScene::Update(float deltaTime, GLFWwindow* window, Camera& camera, Soun
         if (ship.heightPhase3 > 2.0f * M_PI) ship.heightPhase3 -= 2.0f * M_PI;
         if (ship.horizontalPhase1 > 2.0f * M_PI) ship.horizontalPhase1 -= 2.0f * M_PI;
         if (ship.horizontalPhase2 > 2.0f * M_PI) ship.horizontalPhase2 -= 2.0f * M_PI;
-        
-        // Calculer le mouvement horizontal aléatoire naturel
+          // Calculer le mouvement horizontal aléatoire naturel
         ship.randomOffset = glm::vec3(
             sin(ship.horizontalPhase1) * ship.horizontalAmp1 + sin(ship.horizontalPhase2) * ship.horizontalAmp2,
             0.0f, // Pas d'oscillation verticale ici (gérée dans le rendu)
             cos(ship.horizontalPhase1 * 0.7f) * ship.horizontalAmp1 + cos(ship.horizontalPhase2 * 1.3f) * ship.horizontalAmp2
         );
+    }
+    
+    // Mettre à jour la caméra en mode pilote
+    if (pilotMode) {
+        UpdatePilotCamera(camera);
     }
 }
 
@@ -582,9 +599,8 @@ void MainScene::InitializeSpaceships() {
         
         // Tous orbitent au même rayon (entre les astéroïdes et la lune)
         ship.orbitRadius = 180.0f; // Entre les astéroïdes (~60) et la lune (250)
-        
-        // Vitesse orbitale synchronisée mais légèrement variée
-        ship.orbitSpeed = 0.6f + (i * 0.05f); // Vitesses légèrement différentes : 0.6, 0.65, 0.7
+          // Vitesse orbitale synchronisée mais légèrement variée
+        ship.orbitSpeed = 0.25f + (i * 0.025f); // Vitesses légèrement différentes : 0.25, 0.275, 0.3 (réduit de moitié)
         
         // Angle initial
         ship.currentAngle = ship.angleOffset;
@@ -630,4 +646,73 @@ void MainScene::InitializeSpaceships() {
     }
     
     std::cout << "Vaisseaux français initialisés : Bleu, Blanc, Rouge" << std::endl;
+}
+
+//======== MÉTHODES POUR LE MODE PILOTE ========
+
+void MainScene::TogglePilotMode() {
+    pilotMode = !pilotMode;
+    if (pilotMode) {
+        // Changer de vaisseau à chaque activation (rotation entre les 3 vaisseaux)
+        currentSpaceshipIndex = (currentSpaceshipIndex + 1) % SPACESHIP_COUNT;
+        // Initialiser la position précédente
+        lastSpaceshipPosition = GetSpaceshipPosition(currentSpaceshipIndex);
+    }
+}
+
+void MainScene::UpdatePilotCamera(Camera& camera) {
+    if (!pilotMode || currentSpaceshipIndex < 0 || currentSpaceshipIndex >= SPACESHIP_COUNT) {
+        return;
+    }
+    
+    // Obtenir la position actuelle du vaisseau suivi
+    glm::vec3 spaceshipPosition = GetSpaceshipPosition(currentSpaceshipIndex);
+    
+    // Positionner la caméra derrière et au-dessus du vaisseau
+    glm::vec3 offset = glm::vec3(-15.0f, 8.0f, -20.0f); // Derrière, légèrement au-dessus et décalé
+    
+    // Appliquer l'offset à la position du vaisseau
+    camera.Position = spaceshipPosition + offset;
+    
+    // En mode pilote, on ne modifie PAS l'orientation de la caméra
+    // L'utilisateur garde le contrôle avec la souris
+    // Les vecteurs Front, Right, Up sont gérés par les contrôles de la caméra normale
+    
+    // Sauvegarder la position pour le prochain frame
+    lastSpaceshipPosition = spaceshipPosition;
+}
+
+glm::vec3 MainScene::GetSpaceshipPosition(int index) const {
+    if (index < 0 || index >= SPACESHIP_COUNT) {
+        return glm::vec3(0.0f);
+    }
+    
+    const SpaceshipData& ship = spaceships[index];
+    
+    // Recalculer la position exacte du vaisseau (même logique que dans RenderObjects)
+    float x = ship.orbitRadius * cos(ship.currentAngle);
+    float z = ship.orbitRadius * sin(ship.currentAngle);
+    
+    // Variation de hauteur naturelle
+    float heightVariation1 = sin(ship.heightPhase1) * ship.heightAmp1;
+    float heightVariation2 = sin(ship.heightPhase2) * ship.heightAmp2;
+    float heightVariation3 = sin(ship.heightPhase3) * ship.heightAmp3;
+    float orbitBasedVariation = sin(ship.currentAngle * 0.5f + ship.randomPhase) * 3.0f;
+    float y = heightVariation1 + heightVariation2 + heightVariation3 + orbitBasedVariation;
+    
+    // Mouvement horizontal naturel
+    glm::vec3 horizontalOffset = glm::vec3(
+        ship.randomOffset.x * 0.8f,
+        0.0f,
+        ship.randomOffset.z * 0.8f
+    );
+    
+    glm::vec3 basePosition = glm::vec3(x, y, z) + horizontalOffset;
+    
+    // Position finale (orbite autour du soleil)
+    return glm::vec3(
+        lightPosition.x + basePosition.x,
+        lightPosition.y + basePosition.y,
+        lightPosition.z + basePosition.z
+    );
 }

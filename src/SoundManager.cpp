@@ -4,6 +4,11 @@
 #include <iostream>
 #include <algorithm>
 
+// Inclusion conditionnelle de filesystem pour C++17
+#if __cplusplus >= 201703L
+#include <filesystem>
+#endif
+
 #ifndef HAVE_OPENAL
 // Définitions factices pour compiler sans OpenAL
 #define AL_NO_ERROR 0
@@ -338,11 +343,59 @@ void SoundManager::SetupAmbientAudio(const std::string& filePath, const std::str
 void SoundManager::LoadAllSounds() {
     if (!m_initialized) return;
     
-    // Charger tous les sons connus
-    LoadSound("../sound/Zoo.wav", "zoo_ambient");
-    LoadSound("../sound/je_suis_un_homme.wav", "je_suis_un_homme");
+    // Charger automatiquement tous les fichiers .wav du dossier sound/
+    std::vector<std::string> wavFiles = {
+        "../sound/Zoo.wav",
+        "../sound/Zoo.mp3"  // Aussi supporter les mp3 si présents
+    };
+      // Scanner le dossier sound/ pour tous les fichiers .wav
+    // Note: En C++ standard, il faut utiliser std::filesystem (C++17) ou des alternatives
+    #if __cplusplus >= 201703L
+        // Si C++17 est disponible, utiliser std::filesystem
+        try {
+            for (const auto& entry : std::filesystem::directory_iterator("../sound/")) {
+                if (entry.is_regular_file()) {
+                    std::string filepath = entry.path().string();
+                    std::string extension = entry.path().extension().string();
+                    
+                    // Supporter .wav et .mp3
+                    if (extension == ".wav" || extension == ".mp3" || extension == ".WAV" || extension == ".MP3") {
+                        wavFiles.push_back(filepath);
+                    }
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Erreur lors du scan du dossier sound/: " << e.what() << std::endl;
+        }
+    #else        // Fallback: ajouter manuellement les fichiers connus
+        // Zoo.wav est déjà dans la liste de base
+        wavFiles.insert(wavFiles.end(), {
+            "../sound/freeze_rael.wav",
+            "../sound/je_suis_un_homme.wav", 
+            "../sound/spatial_theme.wav"
+        });
+    #endif
     
-    std::cout << "Sons chargés: " << m_sounds.size() << std::endl;
+    // Charger tous les fichiers trouvés
+    for (const std::string& filepath : wavFiles) {
+        // Extraire le nom du fichier sans le chemin et l'extension
+        size_t lastSlash = filepath.find_last_of("/\\");
+        size_t lastDot = filepath.find_last_of(".");
+        
+        if (lastSlash != std::string::npos && lastDot != std::string::npos && lastDot > lastSlash) {
+            std::string filename = filepath.substr(lastSlash + 1, lastDot - lastSlash - 1);
+            
+            // Charger le son
+            if (LoadSound(filepath, filename)) {
+                std::cout << "Son chargé: " << filename << " (" << filepath << ")" << std::endl;
+            } else {
+                std::cout << "Échec du chargement: " << filepath << std::endl;
+            }
+        }
+    }
+    
+    std::cout << "Total des sons chargés: " << m_sounds.size() << std::endl;
+    std::cout << "Sons disponibles:" << std::endl;
     for (const auto& pair : m_sounds) {
         std::cout << "- " << pair.first << std::endl;
     }

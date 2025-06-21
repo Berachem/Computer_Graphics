@@ -254,14 +254,13 @@ void RenderKeyboardUI(GLFWwindow* window) {
     drawKey("Q", GLFW_KEY_A, "Gauche (Q sur AZERTY)"); ImGui::SameLine(0, sp);
     drawKey("S", GLFW_KEY_S, "Arrière"); ImGui::SameLine(0, sp);
     drawKey("D", GLFW_KEY_D, "Droite"); ImGui::SameLine(0, sp*3);
-    drawKey("E", GLFW_KEY_E, "Descendre");
-
-    ImGui::Separator();
+    drawKey("E", GLFW_KEY_E, "Descendre");    ImGui::Separator();
     ImGui::Text("Contrôles:");
 
     drawKey("TAB", GLFW_KEY_TAB, "Basculer mode"); ImGui::SameLine(0, sp);
     drawKey("P", GLFW_KEY_P, "Changer scène"); ImGui::SameLine(0, sp);
-    drawKey("O", GLFW_KEY_O, "Arrêter sons");    ImGui::End();
+    drawKey("V", GLFW_KEY_V, "Mode pilote"); ImGui::SameLine(0, sp);
+    drawKey("O", GLFW_KEY_O, "Arrêter sons");ImGui::End();
 }
 
 } // namespace UIHelpers

@@ -72,23 +72,32 @@ private:    // Les shaders sont maintenant gérés par le ShaderManager global
     std::shared_ptr<AudioSource> ambientSource;
     // Skybox pour cette scène
     std::unique_ptr<Skybox> skybox;
-    SkyboxManager::SkyboxType currentSkyboxType;
-
-    // === Variables de scène ===
+    SkyboxManager::SkyboxType currentSkyboxType;    // === Variables de scène ===
     float sunRadius;
-    bool initialized;    // === Méthodes privées ===
+    bool initialized;
+    
+    // === Mode pilote ===
+    bool pilotMode;
+    int currentSpaceshipIndex; // Index du vaisseau suivi (0, 1, 2)
+    glm::vec3 lastSpaceshipPosition; // Position précédente pour calculer le vecteur de déplacement// === Méthodes privées ===
     bool LoadShaders();
-    bool LoadModels();
-    bool LoadAudio(SoundManager& soundManager);    void InitializeAsteroidRing();
+    bool LoadModels();    bool LoadAudio(SoundManager& soundManager);    void InitializeAsteroidRing();
     void InitializeSpaceships();
     void RenderObjects(Camera& camera, int screenWidth, int screenHeight);
     void ChangeSkybox(SkyboxManager::SkyboxType newType);
+      // === Méthodes pour le mode pilote ===
+    void TogglePilotMode();
+    void UpdatePilotCamera(Camera& camera);
+    glm::vec3 GetSpaceshipPosition(int index) const;
 
 public:
     /**
      * @brief Constructeur
      */
     MainScene();
+
+    // === Méthodes publiques pour le mode pilote ===
+    bool IsPilotMode() const { return pilotMode; }
 
     /**
      * @brief Destructeur

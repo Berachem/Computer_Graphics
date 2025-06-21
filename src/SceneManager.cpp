@@ -135,6 +135,13 @@ const char* SceneManager::GetCurrentSceneName() const {
     return scenes[currentSceneIndex]->GetName();
 }
 
+Scene* SceneManager::GetCurrentScene() const {
+    if (!initialized || currentSceneIndex < 0 || currentSceneIndex >= static_cast<int>(scenes.size())) {
+        return nullptr;
+    }
+    return scenes[currentSceneIndex].get();
+}
+
 bool SceneManager::IsInitialized() const {
     return initialized;
 }

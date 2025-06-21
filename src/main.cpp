@@ -176,12 +176,13 @@ int main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Réinitialiser firstMouse quand on change de mode
-    firstMouse = true;
-
-    std::cout << "=== CONTRÔLES ===" << std::endl;
+    firstMouse = true;    std::cout << "=== CONTRÔLES ===" << std::endl;
     std::cout << "TAB: Basculer entre mode Caméra et Interface" << std::endl;
     std::cout << "P: Changer de scène" << std::endl;
-    std::cout << "ZQSD/AE: Déplacer la caméra (mode caméra, AZERTY)" << std::endl;
+    std::cout << "V: Mode pilote (suit un vaisseau, orientation libre à la souris)" << std::endl;
+    std::cout << "ZQSD/AE: Déplacer la caméra (mode caméra libre uniquement, AZERTY)" << std::endl;
+    std::cout << "Souris: Orientation de la caméra (tous modes)" << std::endl;
+    std::cout << "SHIFT: Sprint (déplacements plus rapides)" << std::endl;
     std::cout << "O: Arrêter tous les sons" << std::endl;
     std::cout << "ESC: Quitter" << std::endl;
     std::cout << "=================" << std::endl;
@@ -328,22 +329,33 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
         speedMultiplier = 10.0f;
-    }
-
-    // Contrôles de la caméra (seulement en mode caméra) - Configuration AZERTY
+    }    // Contrôles de la caméra (seulement en mode caméra ET si pas en mode pilote) - Configuration AZERTY
     if (currentMode == CAMERA_MODE) {
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)  // W = Avant (Z sur AZERTY)
-            camera.ProcessKeyboard(FORWARD, deltaTime * speedMultiplier);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)  // S = Arrière
-            camera.ProcessKeyboard(BACKWARD, deltaTime * speedMultiplier);
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)  // A = Gauche (Q sur AZERTY)
-            camera.ProcessKeyboard(LEFT, deltaTime * speedMultiplier);
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)  // D = Droite
-            camera.ProcessKeyboard(RIGHT, deltaTime * speedMultiplier);
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)  // Q = Monter (A sur AZERTY)
-            camera.ProcessKeyboard(UP, deltaTime * speedMultiplier);
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)  // E = Descendre
-            camera.ProcessKeyboard(DOWN, deltaTime * speedMultiplier);
+        // Vérifier si on est en mode pilote dans la scène active
+        bool isPilotMode = false;
+        auto currentScene = sceneManager.GetCurrentScene();
+        if (currentScene) {
+            auto mainScene = dynamic_cast<MainScene*>(currentScene);
+            if (mainScene) {
+                isPilotMode = mainScene->IsPilotMode();
+            }
+        }
+        
+        // En mode pilote, désactiver les déplacements clavier (garder seulement la rotation souris)
+        if (!isPilotMode) {
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)  // W = Avant (Z sur AZERTY)
+                camera.ProcessKeyboard(FORWARD, deltaTime * speedMultiplier);
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)  // S = Arrière
+                camera.ProcessKeyboard(BACKWARD, deltaTime * speedMultiplier);
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)  // A = Gauche (Q sur AZERTY)
+                camera.ProcessKeyboard(LEFT, deltaTime * speedMultiplier);
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)  // D = Droite
+                camera.ProcessKeyboard(RIGHT, deltaTime * speedMultiplier);
+            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)  // Q = Monter (A sur AZERTY)
+                camera.ProcessKeyboard(UP, deltaTime * speedMultiplier);
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)  // E = Descendre
+                camera.ProcessKeyboard(DOWN, deltaTime * speedMultiplier);
+        }
     }
 
     // Variables statiques pour éviter les répétitions
@@ -405,6 +417,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     }
 
     // Mode caméra : traiter les mouvements de souris pour la caméra
+    // Cela fonctionne aussi en mode pilote pour l'orientation
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
@@ -421,6 +434,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastX = xpos;
     lastY = ypos;
 
+    // En mode pilote, on applique toujours la rotation de souris pour l'orientation
     camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
