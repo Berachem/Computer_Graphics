@@ -5,7 +5,13 @@
 #include "UBO.h"
 #include "imgui.h"
 #include <iostream>
+#include <cstdlib>
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // Variables pour les animations (extraites de main.cpp)
 static float luneOrbitRadius = 10.0f;
@@ -68,10 +74,12 @@ bool MainScene::LoadShaders() {
 bool MainScene::LoadModels() {
     try {
         myModel = std::make_unique<Model>("../models/map-bump.obj");
-        asteroid1 = std::make_unique<Model>("../models/astroid.obj");
-        asteroid2 = std::make_unique<Model>("../models/astroid.obj");
-        asteroid3 = std::make_unique<Model>("../models/astroid.obj");
-        asteroid4 = std::make_unique<Model>("../models/astroid.obj");
+        
+        // Charger un seul modèle d'astéroïde (réutilisé pour tout l'anneau)
+        asteroidModel = std::make_unique<Model>("../models/astroid.obj");
+        
+        // Initialiser l'anneau d'astéroïdes avec des propriétés variées
+        InitializeAsteroidRing();
         
         moonSphere = std::make_unique<Sphere>("../textures/spherical_moon_texture.jpg", 0.5f, 36, 18);
         sunSphere = std::make_unique<Sphere>("", sunRadius, 36, 18);
@@ -203,93 +211,75 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
         sunModel = glm::translate(sunModel, lightPosition);
         g_uboManager->UpdateTransformUBO(sunModel);
         
-        sunSphere->Draw(*sunShader);
-    }    //======== ASTEROIDS (utilisent le shader d'éclairage sélectionné) ========
-    if (currentLightingShader && g_uboManager) {
-        float asteroidOrbitAngle = currentFrame * 0.5f;
-        float asteroidOrbitRadius = 60.0f;
-
-        // Astéroïde 1 - Couleur rouge
+        sunSphere->Draw(*sunShader);    }    //======== ANNEAU D'ASTÉROÏDES (utilisent le shader d'éclairage sélectionné) ========
+    if (currentLightingShader && g_uboManager && asteroidModel) {
         currentLightingShader->use();
-        currentLightingShader->setVec3("objectColor", glm::vec3(0.8f, 0.3f, 0.2f)); // Rouge
-        float inclinationAngle = glm::radians(15.0f);
-        glm::mat4 inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::vec3 asteroidPosition = glm::vec3(
-            asteroidOrbitRadius * cos(asteroidOrbitAngle),
-            0.0f,
-            asteroidOrbitRadius * sin(asteroidOrbitAngle)
-        );
-        glm::vec4 inclinedPosition = inclinationMatrix * glm::vec4(asteroidPosition, 1.0f);
-
-        glm::mat4 asteroidModel = glm::mat4(1.0f);
-        asteroidModel = glm::translate(asteroidModel, glm::vec3(lightPosition.x + inclinedPosition.x,
-                                                               lightPosition.y + inclinedPosition.y,
-                                                               lightPosition.z + inclinedPosition.z));
-        asteroidModel = glm::scale(asteroidModel, glm::vec3(0.05f, 0.05f, 0.05f));
-        asteroidModel = glm::rotate(asteroidModel, asteroidOrbitAngle * 10.0f, glm::vec3(0.0f, 1.0f, 0.5f));
-        g_uboManager->UpdateTransformUBO(asteroidModel);
-        asteroid1->Draw(*currentLightingShader);
-
-        // Astéroïde 2 - Couleur bleue
-        currentLightingShader->setVec3("objectColor", glm::vec3(0.2f, 0.4f, 0.8f)); // Bleu
-        inclinationAngle = glm::radians(11.0f);
-        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::vec3 asteroid2Position = glm::vec3(
-            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(10.0f)),
-            0.0f,
-            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(10.0f))
-        );
-        glm::vec4 inclinedPosition2 = inclinationMatrix * glm::vec4(asteroid2Position, 1.0f);
-
-        glm::mat4 asteroid2Model = glm::mat4(1.0f);
-        asteroid2Model = glm::translate(asteroid2Model, glm::vec3(lightPosition.x + inclinedPosition2.x,
-                                                                 lightPosition.y + inclinedPosition2.y,
-                                                                 lightPosition.z + inclinedPosition2.z));
-        asteroid2Model = glm::scale(asteroid2Model, glm::vec3(0.025f, 0.042f, 0.015f));
-        asteroid2Model = glm::rotate(asteroid2Model, asteroidOrbitAngle * 7.0f, glm::vec3(0.5f, 1.0f, 0.0f));
-        g_uboManager->UpdateTransformUBO(asteroid2Model);        asteroid2->Draw(*currentLightingShader);
-
-        // Astéroïde 3 - Couleur jaune
-        currentLightingShader->setVec3("objectColor", glm::vec3(0.8f, 0.8f, 0.2f)); // Jaune
         
-        // Astéroïde 3
-        inclinationAngle = glm::radians(0.0f);
-        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::vec3 asteroid3Position = glm::vec3(
-            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(15.0f)),
-            0.0f,
-            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(15.0f))
-        );
-        glm::vec4 inclinedPosition3 = inclinationMatrix * glm::vec4(asteroid3Position, 1.0f);
-
-        glm::mat4 asteroid3Model = glm::mat4(1.0f);
-        asteroid3Model = glm::translate(asteroid3Model, glm::vec3(lightPosition.x + inclinedPosition3.x,
-                                                                 lightPosition.y + inclinedPosition3.y,
-                                                                 lightPosition.z + inclinedPosition3.z));
-        asteroid3Model = glm::scale(asteroid3Model, glm::vec3(0.08f, 0.08f, 0.08f));
-        asteroid3Model = glm::rotate(asteroid3Model, asteroidOrbitAngle * 12.0f, glm::vec3(1.0f, 0.0f, 1.0f));
-        g_uboManager->UpdateTransformUBO(asteroid3Model);
-        asteroid3->Draw(*currentLightingShader);
-
-        // Astéroïde 4 - Couleur violette
-        currentLightingShader->setVec3("objectColor", glm::vec3(0.6f, 0.2f, 0.8f)); // Violet
-        inclinationAngle = glm::radians(8.0f);
-        inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::vec3 asteroid4Position = glm::vec3(
-            asteroidOrbitRadius * cos(asteroidOrbitAngle + glm::radians(25.0f)),
-            0.0f,
-            asteroidOrbitRadius * sin(asteroidOrbitAngle + glm::radians(25.0f))
-        );
-        glm::vec4 inclinedPosition4 = inclinationMatrix * glm::vec4(asteroid4Position, 1.0f);
-
-        glm::mat4 asteroid4Model = glm::mat4(1.0f);
-        asteroid4Model = glm::translate(asteroid4Model, glm::vec3(lightPosition.x + inclinedPosition4.x,
-                                                                 lightPosition.y + inclinedPosition4.y,
-                                                                 lightPosition.z + inclinedPosition4.z));
-        asteroid4Model = glm::scale(asteroid4Model, glm::vec3(0.012f, 0.014f, 0.013f));
-        asteroid4Model = glm::rotate(asteroid4Model, asteroidOrbitAngle * 5.0f, glm::vec3(0.3f, 0.7f, 0.2f));
-        g_uboManager->UpdateTransformUBO(asteroid4Model);
-        asteroid4->Draw(*currentLightingShader);
+        const float baseOrbitRadius = 60.0f;
+        const float orbitHeight = 12.0f; // Hauteur de variation augmentée pour plus de relief
+        
+        for (int i = 0; i < ASTEROID_COUNT; ++i) {
+            const AsteroidData& asteroid = asteroids[i];
+            
+            // Calcul de la position orbitale avec variations plus complexes
+            float currentAngle = currentFrame * asteroid.orbitSpeed + asteroid.angleOffset;
+            float orbitRadius = baseOrbitRadius + asteroid.radiusOffset;
+            
+            // Variations verticales plus complexes pour simuler l'épaisseur de la ceinture
+            float verticalVariation = sin(currentAngle * 2.5f + asteroid.angleOffset * 3.0f) * orbitHeight * 0.15f;
+            verticalVariation += sin(currentAngle * 1.2f + asteroid.angleOffset * 1.7f) * orbitHeight * 0.08f;
+            
+            // Position de base dans le plan orbital
+            glm::vec3 asteroidPosition = glm::vec3(
+                orbitRadius * cos(currentAngle),
+                verticalVariation,
+                orbitRadius * sin(currentAngle)
+            );
+            
+            // Inclinaison variable de l'anneau pour plus de réalisme
+            float inclinationAngle = glm::radians(3.0f + sin(asteroid.angleOffset * 2.0f) * 4.0f);
+            glm::mat4 inclinationMatrix = glm::rotate(glm::mat4(1.0f), inclinationAngle, 
+                                                     glm::vec3(cos(asteroid.angleOffset), 0.0f, sin(asteroid.angleOffset)));
+            glm::vec4 inclinedPosition = inclinationMatrix * glm::vec4(asteroidPosition, 1.0f);
+            
+            // Couleur de l'astéroïde avec légère variation d'intensité basée sur la distance
+            glm::vec3 finalColor = asteroid.color;
+            float distanceFactor = 1.0f + (asteroid.radiusOffset / 50.0f); // Variation subtile
+            finalColor *= distanceFactor;
+            currentLightingShader->setVec3("objectColor", finalColor);
+            
+            // Transformation de l'astéroïde
+            glm::mat4 asteroidModel = glm::mat4(1.0f);
+            asteroidModel = glm::translate(asteroidModel, glm::vec3(
+                lightPosition.x + inclinedPosition.x,
+                lightPosition.y + inclinedPosition.y,
+                lightPosition.z + inclinedPosition.z
+            ));
+            
+            // Échelle de l'astéroïde avec légère variation temporelle
+            float scaleVariation = 1.0f + sin(currentFrame * 0.3f + asteroid.angleOffset * 5.0f) * 0.05f;
+            glm::vec3 finalScale = glm::vec3(asteroid.scale * scaleVariation);
+            asteroidModel = glm::scale(asteroidModel, finalScale);
+            
+            // Rotation propre de l'astéroïde plus complexe
+            float rotationAngle = currentFrame * asteroid.rotationSpeed + asteroid.angleOffset * 10.0f;
+            asteroidModel = glm::rotate(asteroidModel, rotationAngle, asteroid.rotationAxis);
+            
+            // Rotation supplémentaire pour plus de mouvement
+            float secondaryRotation = currentFrame * asteroid.rotationSpeed * 0.3f;
+            glm::vec3 secondaryAxis = glm::normalize(glm::vec3(asteroid.rotationAxis.z, asteroid.rotationAxis.x, asteroid.rotationAxis.y));
+            asteroidModel = glm::rotate(asteroidModel, secondaryRotation, secondaryAxis);
+            
+            g_uboManager->UpdateTransformUBO(asteroidModel);
+            this->asteroidModel->Draw(*currentLightingShader);
+        }
+        
+        // Afficher des informations de debug occasionnelles
+        static int frameCounter = 0;
+        frameCounter++;
+        if (frameCounter % 300 == 0) { // Toutes les 5 secondes environ à 60 FPS
+            std::cout << "Anneau d'astéroïdes : " << ASTEROID_COUNT << " astéroïdes en orbite" << std::endl;
+        }
     }
 
     //======== SPHÈRE DE TEST (pour comparer Phong vs Lambert) ========
@@ -308,19 +298,15 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
 void MainScene::Cleanup() {
     if (ambientSource) {
         ambientSource->Stop();
-    }    // Les modèles 3D se nettoient automatiquement avec les smart pointers
+    }
+
+    // Les modèles 3D se nettoient automatiquement avec les smart pointers
     myModel.reset();
-    asteroid1.reset();
-    asteroid2.reset();
-    asteroid3.reset();
-    asteroid4.reset();
+    asteroidModel.reset(); // Un seul modèle d'astéroïde maintenant
 
     moonSphere.reset();
     sunSphere.reset();
     testSphere.reset();
-
-    moonSphere.reset();
-    sunSphere.reset();
 
     initialized = false;
     std::cout << "MainScene nettoyée" << std::endl;
@@ -333,4 +319,109 @@ void MainScene::ChangeSkybox(SkyboxManager::SkyboxType newType) {
         skybox = std::make_unique<Skybox>(skyboxFaces);
         std::cout << "Skybox changée pour MainScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
     }
+}
+
+void MainScene::InitializeAsteroidRing() {
+    // Couleurs réalistes d'astéroïdes étendues (basées sur leur composition minéralogique)
+    std::vector<glm::vec3> asteroidColors = {
+        // Astéroïdes de type S (silicatés) - plus clairs
+        glm::vec3(0.55f, 0.45f, 0.35f), // Beige rocheuse (chondrite ordinaire)
+        glm::vec3(0.50f, 0.40f, 0.30f), // Terre de Sienne (olivine + pyroxène)
+        glm::vec3(0.60f, 0.50f, 0.40f), // Beige clair (plagioclase)
+        glm::vec3(0.45f, 0.38f, 0.28f), // Ocre (composition mixte)
+        
+        // Astéroïdes de type C (carbonés) - plus sombres
+        glm::vec3(0.25f, 0.20f, 0.15f), // Brun très foncé (carbone + hydrates)
+        glm::vec3(0.30f, 0.25f, 0.20f), // Brun-gris foncé
+        glm::vec3(0.35f, 0.28f, 0.22f), // Gris-brun (argiles)
+        glm::vec3(0.28f, 0.22f, 0.18f), // Anthracite
+        
+        // Astéroïdes de type M (métalliques) - reflets métalliques
+        glm::vec3(0.45f, 0.45f, 0.45f), // Gris métallique (fer-nickel)
+        glm::vec3(0.50f, 0.48f, 0.46f), // Acier patiné
+        glm::vec3(0.42f, 0.40f, 0.38f), // Graphite métallique
+        glm::vec3(0.48f, 0.46f, 0.44f), // Fer oxydé
+        
+        // Astéroïdes riches en mineraux spécifiques
+        glm::vec3(0.40f, 0.32f, 0.24f), // Rouille (hématite)
+        glm::vec3(0.52f, 0.42f, 0.32f), // Grès (quartz + feldspath)
+        glm::vec3(0.38f, 0.35f, 0.30f), // Basalte altéré
+        glm::vec3(0.46f, 0.40f, 0.34f), // Schiste
+        
+        // Variations supplémentaires pour plus de diversité
+        glm::vec3(0.36f, 0.30f, 0.24f), // Terre d'ombre
+        glm::vec3(0.58f, 0.48f, 0.38f), // Sable désertique
+        glm::vec3(0.33f, 0.27f, 0.21f), // Tourbe
+        glm::vec3(0.51f, 0.43f, 0.35f), // Argile cuite
+        
+        // Astéroïdes avec traces de métaux précieux ou rares
+        glm::vec3(0.44f, 0.41f, 0.36f), // Bronze patiné
+        glm::vec3(0.39f, 0.36f, 0.31f), // Cuivre oxydé
+        glm::vec3(0.47f, 0.43f, 0.37f), // Laiton terni
+        glm::vec3(0.41f, 0.37f, 0.32f)  // Fer-nickel avec traces
+    };
+
+    // Initialiser le générateur de nombres aléatoires
+    srand(static_cast<unsigned int>(42)); // Graine fixe pour des résultats reproductibles
+
+    for (int i = 0; i < ASTEROID_COUNT; ++i) {
+        AsteroidData& asteroid = asteroids[i];
+        
+        // Répartition plus dense avec quelques variations pour éviter la régularité
+        float baseAngle = (2.0f * M_PI * i) / ASTEROID_COUNT;
+        float angleVariation = (rand() % 20 - 10) * 0.01f; // ±0.1 radian de variation
+        asteroid.angleOffset = baseAngle + angleVariation;
+        
+        // Variation plus importante du rayon orbital pour créer des "groupes" d'astéroïdes
+        if (i % 8 == 0) {
+            // Quelques astéroïdes plus éloignés pour simuler des "familles" d'astéroïdes
+            asteroid.radiusOffset = 8.0f + (rand() % 8); // Entre +8 et +15
+        } else if (i % 12 == 0) {
+            // Quelques astéroïdes plus proches
+            asteroid.radiusOffset = -8.0f - (rand() % 6); // Entre -8 et -13
+        } else {
+            // Majorité dans la ceinture principale
+            asteroid.radiusOffset = -3.0f + (rand() % 7); // Entre -3 et +3
+        }
+        
+        // Échelles plus variées avec quelques "gros" astéroïdes occasionnels
+        float baseScale;
+        if (i % 15 == 0) {
+            // Gros astéroïdes occasionnels
+            baseScale = 0.08f + (rand() % 4) * 0.02f; // Entre 0.08 et 0.14
+        } else if (i % 7 == 0) {
+            // Astéroïdes moyens
+            baseScale = 0.04f + (rand() % 4) * 0.01f; // Entre 0.04 et 0.07
+        } else {
+            // Petits astéroïdes (majoritaires)
+            baseScale = 0.015f + (rand() % 4) * 0.005f; // Entre 0.015 et 0.03
+        }
+        asteroid.scale = baseScale;
+        
+        // Vitesses de rotation plus variées
+        asteroid.rotationSpeed = 1.0f + (rand() % 15) * 0.5f; // Entre 1.0 et 8.5
+        
+        // Axes de rotation aléatoires mais plus naturels
+        asteroid.rotationAxis = glm::normalize(glm::vec3(
+            (rand() % 200 - 100) / 100.0f,  // -1.0 à 1.0
+            (rand() % 200 - 100) / 100.0f,
+            (rand() % 200 - 100) / 100.0f
+        ));
+        
+        // Couleur réaliste avec plus de variété
+        asteroid.color = asteroidColors[i % asteroidColors.size()];
+        
+        // Vitesse orbitale variée avec légère tendance selon la distance
+        float baseOrbitSpeed = 0.4f + (rand() % 6) * 0.05f; // Entre 0.4 et 0.65
+        // Les astéroïdes plus éloignés vont légèrement plus lentement (3ème loi de Kepler simplifiée)
+        if (asteroid.radiusOffset > 5.0f) {
+            baseOrbitSpeed *= 0.9f;
+        } else if (asteroid.radiusOffset < -5.0f) {
+            baseOrbitSpeed *= 1.1f;
+        }
+        asteroid.orbitSpeed = baseOrbitSpeed;
+    }
+    
+    std::cout << "Anneau d'astéroïdes initialisé avec " << ASTEROID_COUNT << " astéroïdes" << std::endl;
+    std::cout << "Palette de couleurs étendue : " << asteroidColors.size() << " variations réalistes" << std::endl;
 }

@@ -21,14 +21,23 @@
  */
 class MainScene : public Scene {
 private:
-    // Les shaders sont maintenant gérés par le ShaderManager global
-
-    // === Modèles 3D ===
+    // Les shaders sont maintenant gérés par le ShaderManager global    // === Modèles 3D ===
     std::unique_ptr<Model> myModel;
-    std::unique_ptr<Model> asteroid1;
-    std::unique_ptr<Model> asteroid2;
-    std::unique_ptr<Model> asteroid3;
-    std::unique_ptr<Model> asteroid4;    // === Sphères ===
+      // === Anneau d'astéroïdes ===
+    std::unique_ptr<Model> asteroidModel; // Un seul modèle réutilisé
+    static const int ASTEROID_COUNT = 72; // Nombre d'astéroïdes dans l'anneau (plus dense)
+    
+    struct AsteroidData {
+        float angleOffset;      // Décalage angulaire dans l'anneau
+        float radiusOffset;     // Variation du rayon orbital
+        float scale;           // Échelle de l'astéroïde
+        float rotationSpeed;   // Vitesse de rotation propre
+        glm::vec3 rotationAxis; // Axe de rotation
+        glm::vec3 color;       // Couleur de l'astéroïde
+        float orbitSpeed;      // Vitesse orbitale
+    };
+    
+    AsteroidData asteroids[ASTEROID_COUNT];// === Sphères ===
     std::unique_ptr<Sphere> moonSphere;
     std::unique_ptr<Sphere> sunSphere;
     std::unique_ptr<Sphere> testSphere; // Sphère de test pour comparer les shaders
@@ -42,12 +51,11 @@ private:
 
     // === Variables de scène ===
     float sunRadius;
-    bool initialized;
-
-    // === Méthodes privées ===
+    bool initialized;    // === Méthodes privées ===
     bool LoadShaders();
     bool LoadModels();
     bool LoadAudio(SoundManager& soundManager);
+    void InitializeAsteroidRing();
     void RenderObjects(Camera& camera, int screenWidth, int screenHeight);
     void ChangeSkybox(SkyboxManager::SkyboxType newType);
 
