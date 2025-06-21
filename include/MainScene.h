@@ -100,10 +100,12 @@ public:
     virtual void Update(float deltaTime, GLFWwindow* window, Camera& camera, SoundManager& soundManager) override;
     virtual void Render(Camera& camera, int screenWidth, int screenHeight) override;
     virtual void RenderUI(GLFWwindow* window, SoundManager& soundManager) override;
-    virtual void Cleanup() override;
-    virtual const char* GetName() const override;
+    virtual void Cleanup() override;    virtual const char* GetName() const override;
     virtual void OnActivate() override;
     virtual void OnDeactivate() override;
+    
+    // === Méthode pour positionner la caméra ===
+    void SetupCameraOverview(Camera& camera);
 };
 
 #endif // MAINSCENE_H

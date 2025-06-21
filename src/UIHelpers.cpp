@@ -18,6 +18,7 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
     if (!soundManager.IsInitialized()) return;
 
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
     ImGui::Begin("Contrôles Audio", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     float masterVolume = soundManager.GetMasterVolume();
@@ -77,9 +78,6 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
         bool isPlaying = source->IsPlaying();
         bool isPaused = source->IsPaused();
 
-        // Debug des états
-        ImGui::Text("Debug - Playing: %s, Paused: %s", isPlaying ? "true" : "false", isPaused ? "true" : "false");
-
         if (isPlaying && !isPaused) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "État: En cours");
         } else if (isPaused) {
@@ -132,6 +130,7 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
 void RenderMainControlsUI(SkyboxManager::SkyboxType& currentSkyboxType, std::function<void(SkyboxManager::SkyboxType)> onSkyboxChange) {
     ImGui::SetNextWindowPos(ImVec2(350, 10), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(280, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
     ImGui::Begin("Contrôles Principaux", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     // Section Shaders
@@ -199,6 +198,7 @@ void RenderMainControlsUI(SkyboxManager::SkyboxType& currentSkyboxType, std::fun
 void RenderSkyboxUI(const char* title, SkyboxManager::SkyboxType& currentType, std::function<void(SkyboxManager::SkyboxType)> onChange) {
     ImGui::SetNextWindowPos(ImVec2(350, 10), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_Always); // Largeur plus grande
+    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
     ImGui::Begin(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     static const SkyboxManager::SkyboxType types[] = {
         SkyboxManager::SkyboxType::COLORER,
@@ -245,10 +245,8 @@ void RenderKeyboardUI(GLFWwindow* window) {
         if (description && ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", description);
         }
-    };
-
-    ImGui::Text("Déplacement caméra:");
-    ImGui::Dummy(ImVec2(keySize, 0.0f)); ImGui::SameLine(0, sp);
+    };    ImGui::Text("Déplacement caméra:");
+    drawKey("SHIFT", GLFW_KEY_LEFT_SHIFT, "Sprint (maintenir + mouvement)"); ImGui::SameLine(0, sp);
     drawKey("Z", GLFW_KEY_W, "Avant (Z sur AZERTY)"); ImGui::SameLine(0, sp);
     ImGui::Dummy(ImVec2(keySize, 0.0f)); ImGui::SameLine(0, sp*3);
     drawKey("A", GLFW_KEY_Q, "Monter (A sur AZERTY)");
@@ -256,7 +254,9 @@ void RenderKeyboardUI(GLFWwindow* window) {
     drawKey("Q", GLFW_KEY_A, "Gauche (Q sur AZERTY)"); ImGui::SameLine(0, sp);
     drawKey("S", GLFW_KEY_S, "Arrière"); ImGui::SameLine(0, sp);
     drawKey("D", GLFW_KEY_D, "Droite"); ImGui::SameLine(0, sp*3);
-    drawKey("E", GLFW_KEY_E, "Descendre");    ImGui::Separator();
+    drawKey("E", GLFW_KEY_E, "Descendre");
+
+    ImGui::Separator();
     ImGui::Text("Contrôles:");
 
     drawKey("TAB", GLFW_KEY_TAB, "Basculer mode"); ImGui::SameLine(0, sp);

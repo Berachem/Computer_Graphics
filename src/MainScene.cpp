@@ -51,13 +51,14 @@ bool MainScene::Initialize(Camera& camera, SoundManager& soundManager) {
     if (!LoadAudio(soundManager)) {
         std::cerr << "Avertissement : échec du chargement de l'audio" << std::endl;
         // Continuer sans audio
-    }
-
-    // Charger la skybox colorée pour MainScene
-    currentSkyboxType = SkyboxManager::SkyboxType::COLORER;
+    }    // Charger la skybox spatiale pour MainScene (vue d'ensemble de l'espace)
+    currentSkyboxType = SkyboxManager::SkyboxType::SPACE;
     std::vector<std::string> skyboxFaces = SkyboxManager::GetSkyboxFaces(currentSkyboxType);
     skybox = std::make_unique<Skybox>(skyboxFaces);
     std::cout << "Skybox chargée pour MainScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
+
+    // Positionner la caméra pour une vue d'ensemble
+    SetupCameraOverview(camera);
 
     initialized = true;
     std::cout << "MainScene initialisée avec succès" << std::endl;
@@ -190,6 +191,37 @@ void MainScene::OnActivate() {
     if (ambientSource && zooSound && !ambientSource->IsPlaying()) {
         ambientSource->Play(zooSound, true);
     }
+}
+
+void MainScene::SetupCameraOverview(Camera& camera) {
+    // Position de la caméra pour une vue d'ensemble de la scène
+    // Placer la caméra en arrière et en hauteur pour voir :
+    // - Le soleil au centre
+    // - L'anneau d'astéroïdes (rayon ~60)  
+    // - Les vaisseaux français (rayon 180)
+    // - La lune (rayon 250)
+    
+    // Position basée sur l'image fournie
+    glm::vec3 overviewPosition = glm::vec3(-229.4f, 131.9f, 435.1f);
+    
+    // Point vers lequel regarder (centre du système solaire)
+    glm::vec3 targetPosition = glm::vec3(-100.0f, 15.0f, -100.0f); // Position du soleil
+    
+    // Calculer la direction
+    glm::vec3 direction = glm::normalize(targetPosition - overviewPosition);
+    
+    // Mettre à jour la position et l'orientation de la caméra
+    camera.Position = overviewPosition;
+    camera.Front = direction;
+    
+    // Calculer les vecteurs Right et Up
+    camera.Right = glm::normalize(glm::cross(camera.Front, glm::vec3(0.0f, 1.0f, 0.0f)));
+    camera.Up = glm::normalize(glm::cross(camera.Right, camera.Front));
+    
+    // Ajuster le zoom pour une vue plus large
+    camera.Zoom = 35.0f; // Vue plus large que les 45° par défaut
+    
+    std::cout << "Caméra positionnée à (-229.4, 131.9, 435.1) pour vue d'ensemble de la scène spatiale" << std::endl;
 }
 
 void MainScene::OnDeactivate() {
