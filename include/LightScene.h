@@ -31,11 +31,10 @@ private:
     float lightRadius;
     float rotationSpeed;
     float currentRotation;
-    bool initialized;
-
-    // === Audio (mutualisé via SoundManager) ===
+    bool initialized;    // === Audio (mutualisé via SoundManager) ===
     std::shared_ptr<Sound> zooSound;
     std::shared_ptr<AudioSource> ambientSource;
+    std::string currentSoundName; // Nom du son actuellement chargé
 
     // === Méthodes privées ===
     bool LoadShaders();
@@ -48,12 +47,14 @@ public:
     /**
      * @brief Constructeur
      */
-    LightScene();
-
-    /**
+    LightScene();    /**
      * @brief Destructeur
      */
-    virtual ~LightScene();
+    virtual ~LightScene();    // === Méthode pour changer le son de la scène ===
+    bool ChangeSceneSound(const std::string& soundName, SoundManager& soundManager);
+    
+    // === Méthode pour obtenir le nom du son actuel ===
+    std::string GetCurrentSoundName() const;
 
     // === Méthodes héritées de Scene ===
     virtual bool Initialize(Camera& camera, SoundManager& soundManager) override;

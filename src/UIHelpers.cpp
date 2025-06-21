@@ -2,6 +2,7 @@
 // include pour gestion des skyboxes et types
 #include "SkyboxManager.h"
 #include "ShaderManager.h"
+// Scene est en forward declaration dans UIHelpers.h - pas besoin d'include ici
 #include <vector>
 #include <string>
 #include <iostream>
@@ -14,7 +15,7 @@
 
 namespace UIHelpers {
 
-void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_ptr<AudioSource> source, std::shared_ptr<Sound> sound) {
+void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_ptr<AudioSource> source, std::shared_ptr<Sound> sound, const std::string& currentSoundName, std::function<bool(const std::string&)> changeSoundCallback) {
     if (!soundManager.IsInitialized()) return;
 
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
@@ -27,12 +28,9 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
         soundManager.SetMasterVolume(masterVolume);
     }
 
-    ImGui::Separator();
-
-    // Sélection du son
+    ImGui::Separator();    // Sélection du son
     ImGui::Text("Sélection du son:");
     std::vector<std::string> soundNames = soundManager.GetSoundNames();
-    std::string currentSoundName = soundManager.GetCurrentSoundName();
     
     if (!soundNames.empty()) {
         // Trouver l'index du son actuel
@@ -50,26 +48,20 @@ void RenderAudioUI(GLFWwindow* window, SoundManager& soundManager, std::shared_p
                 *out_text = (*names)[idx].c_str();
                 return true;
             }
-            return false;
-        }, &soundNames, static_cast<int>(soundNames.size()))) {
-            // Changement de son
-            if (currentIndex >= 0 && currentIndex < static_cast<int>(soundNames.size())) {
-                soundManager.SetCurrentAmbientSound(soundNames[currentIndex]);
-                
-                // Lancer automatiquement le nouveau son
-                if (source) {
-                    std::shared_ptr<Sound> newSound = soundManager.GetAmbientSound();
-                    if (newSound) {
-                        source->Play(newSound, true);
-                        std::cout << "Nouveau son lancé automatiquement: " << newSound->GetFileName() << std::endl;
-                    }
+            return false;        }, &soundNames, static_cast<int>(soundNames.size()))) {
+            // Changement de son via le callback
+            if (currentIndex >= 0 && currentIndex < static_cast<int>(soundNames.size()) && changeSoundCallback) {
+                if (changeSoundCallback(soundNames[currentIndex])) {
+                    std::cout << "Son changé vers: " << soundNames[currentIndex] << std::endl;
+                } else {
+                    std::cerr << "Échec du changement de son vers: " << soundNames[currentIndex] << std::endl;
                 }
             }
         }
     }    ImGui::Separator();
 
-    // Récupérer le son actuel depuis le SoundManager
-    std::shared_ptr<Sound> currentSound = soundManager.GetAmbientSound();
+    // Utiliser le son passé en paramètre au lieu du système global
+    std::shared_ptr<Sound> currentSound = sound;
     
     if (currentSound && source) {
         ImGui::Text("Son d'ambiance: %s", currentSound->GetFileName().c_str());

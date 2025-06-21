@@ -72,6 +72,14 @@ public:
      * @brief Appelée when la scène devient inactive
      */
     virtual void OnDeactivate() {}
+
+    /**
+     * @brief Change le son de la scène
+     * @param soundName Nom du son à charger
+     * @param soundManager Référence vers le gestionnaire audio
+     * @return true si le changement réussit, false sinon
+     */
+    virtual bool ChangeSceneSound(const std::string& soundName, SoundManager& soundManager) { return false; }
 };
 
 #endif // SCENE_H

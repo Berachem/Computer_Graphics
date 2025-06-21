@@ -65,11 +65,10 @@ private:    // Les shaders sont maintenant gérés par le ShaderManager global
 
     // === Sphères ===
     std::unique_ptr<Sphere> moonSphere;
-    std::unique_ptr<Sphere> sunSphere;
-
-    // === Audio (mutualisé via SoundManager) ===
+    std::unique_ptr<Sphere> sunSphere;    // === Audio (mutualisé via SoundManager) ===
     std::shared_ptr<Sound> zooSound;
     std::shared_ptr<AudioSource> ambientSource;
+    std::string currentSoundName; // Nom du son actuellement chargé
     // Skybox pour cette scène
     std::unique_ptr<Skybox> skybox;
     SkyboxManager::SkyboxType currentSkyboxType;    // === Variables de scène ===
@@ -94,10 +93,14 @@ public:
     /**
      * @brief Constructeur
      */
-    MainScene();
-
-    // === Méthodes publiques pour le mode pilote ===
+    MainScene();    // === Méthodes publiques pour le mode pilote ===
     bool IsPilotMode() const { return pilotMode; }
+    
+    // === Méthode pour changer le son de la scène ===
+    bool ChangeSceneSound(const std::string& soundName, SoundManager& soundManager);
+    
+    // === Méthode pour obtenir le nom du son actuel ===
+    std::string GetCurrentSoundName() const;
 
     /**
      * @brief Destructeur

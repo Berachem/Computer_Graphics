@@ -39,16 +39,14 @@ bool LightScene::Initialize(Camera& camera, SoundManager& soundManager) {
     if (!CreateLightSphere()) {
         std::cerr << "Erreur : échec de la création de la sphère de lumière" << std::endl;
         return false;
-    }
-
-    // Charger l'audio
+    }    // Charger l'audio
     if (!LoadAudio(soundManager)) {
         std::cerr << "Avertissement : échec du chargement de l'audio pour LightScene" << std::endl;
         // Continuer sans audio
     }
-
-    // Charger la skybox spatiale pour LightScene (différente de MainScene)
-    currentSkyboxType = SkyboxManager::SkyboxType::SPACE;
+    
+    // Charger la skybox zoo pour LightScene (différente de MainScene)
+    currentSkyboxType = SkyboxManager::SkyboxType::ZOO;
     std::vector<std::string> skyboxFaces = SkyboxManager::GetSkyboxFaces(currentSkyboxType);
     skybox = std::make_unique<Skybox>(skyboxFaces);
     std::cout << "Skybox chargée pour LightScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
@@ -135,10 +133,11 @@ void LightScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
     if (!initialized) return;
 
     // Interface de contrôles clavier unifiée
-    UIHelpers::RenderKeyboardUI(window);
-
-    // Interface audio mutualisée - passer nullptr pour que l'interface utilise le son actuel du SoundManager
-    UIHelpers::RenderAudioUI(window, soundManager, ambientSource, nullptr);
+    UIHelpers::RenderKeyboardUI(window);    // Interface audio avec le son spécifique de cette scène
+    UIHelpers::RenderAudioUI(window, soundManager, ambientSource, zooSound, currentSoundName,
+        [this, &soundManager](const std::string& soundName) -> bool {
+            return this->ChangeSceneSound(soundName, soundManager);
+        });
     
     // Interface de contrôles principaux unifiée (shader + skybox)
     UIHelpers::RenderMainControlsUI(currentSkyboxType,
@@ -151,11 +150,32 @@ const char* LightScene::GetName() const {
 }
 
 void LightScene::OnActivate() {
-    std::cout << "LightScene activée - Scène d'éclairage statique prête pour l'ajout d'objets" << std::endl;
+    std::cout << "LightScene activée - Son Zoo" << std::endl;
+    // Toujours démarrer l'audio Zoo lors de l'activation
+    if (ambientSource && zooSound) {
+        ambientSource->Stop(); // S'assurer qu'il n'y a pas de son résiduel
+        ambientSource->Play(zooSound, true);
+        std::cout << "Démarrage de la musique Zoo" << std::endl;
+    } else {
+        std::cout << "LightScene: Impossible de démarrer la musique (source ou son manquant)" << std::endl;
+    }
 }
 
 void LightScene::OnDeactivate() {
     std::cout << "LightScene désactivée" << std::endl;
+    // Arrêter complètement l'audio pour cette scène (au lieu de pause)
+    if (ambientSource) {
+        std::cout << "LightScene: Source audio existe" << std::endl;
+        if (ambientSource->IsPlaying() || ambientSource->IsPaused()) {
+            std::cout << "LightScene: Arrêt de la musique..." << std::endl;
+            ambientSource->Stop();
+            std::cout << "Arrêt de la musique Zoo" << std::endl;
+        } else {
+            std::cout << "LightScene: Musique n'était pas en cours de lecture" << std::endl;
+        }
+    } else {
+        std::cout << "LightScene: Pas de source audio disponible" << std::endl;
+    }
 }
 
 
@@ -171,9 +191,30 @@ void LightScene::Cleanup() {
 
 bool LightScene::LoadAudio(SoundManager& soundManager) {
     if (!soundManager.IsInitialized()) return false;
-    soundManager.SetupAmbientAudio();
-    zooSound = soundManager.GetAmbientSound();
-    ambientSource = soundManager.GetAmbientSource();
+    
+    // Charger le son Zoo pour LightScene (complètement indépendant)
+    std::string soundName = "Zoo";
+    zooSound = soundManager.GetSound(soundName);
+    if (!zooSound) {
+        // Fallback si Zoo n'existe pas
+        soundName = "spatial_theme";
+        zooSound = soundManager.GetSound(soundName);
+        std::cout << "LightScene: Fallback vers spatial_theme" << std::endl;
+    } else {
+        std::cout << "LightScene: Chargement de Zoo" << std::endl;
+    }
+    
+    // Sauvegarder le nom du son actuel
+    currentSoundName = soundName;
+    
+    // Créer une source audio INDEPENDANTE pour cette scène
+    ambientSource = soundManager.CreateAudioSource();
+    if (ambientSource) {
+        ambientSource->SetPosition({0.0f, 0.0f, 0.0f});
+        ambientSource->SetVolume(0.3f);
+        std::cout << "LightScene: Source audio créée" << std::endl;
+    }
+    
     return (zooSound && ambientSource);
 }
 
@@ -184,4 +225,39 @@ void LightScene::ChangeSkybox(SkyboxManager::SkyboxType newType) {
         skybox = std::make_unique<Skybox>(skyboxFaces);
         std::cout << "Skybox changée pour LightScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
     }
+}
+
+bool LightScene::ChangeSceneSound(const std::string& soundName, SoundManager& soundManager) {
+    auto newSound = soundManager.GetSound(soundName);
+    if (!newSound) {
+        std::cerr << "Son non trouvé: " << soundName << std::endl;
+        return false;
+    }
+    
+    // Sauvegarder l'état de lecture actuel
+    bool wasPlaying = ambientSource && ambientSource->IsPlaying();
+    bool wasPaused = ambientSource && ambientSource->IsPaused();
+    
+    // Arrêter le son actuel
+    if (ambientSource && (wasPlaying || wasPaused)) {
+        ambientSource->Stop();
+    }
+    
+    // Changer le son et sauvegarder le nom
+    zooSound = newSound;
+    currentSoundName = soundName;
+    
+    // Reprendre la lecture si elle était en cours
+    if (ambientSource && wasPlaying) {
+        ambientSource->Play(zooSound, true);
+        std::cout << "LightScene: Son changé vers " << soundName << " (reprise automatique)" << std::endl;
+    } else {
+        std::cout << "LightScene: Son changé vers " << soundName << std::endl;
+    }
+    
+    return true;
+}
+
+std::string LightScene::GetCurrentSoundName() const {
+    return currentSoundName;
 }

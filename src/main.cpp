@@ -69,9 +69,7 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
-// Variables audio (pour compatibilité avec l'ancien code)
-std::shared_ptr<Sound> zooSound;
-std::shared_ptr<AudioSource> ambientSource;
+// Variables audio supprimées - gérées par les scènes individuellement
 
 int main()
 {
@@ -131,25 +129,12 @@ int main()
     }
 
     // === Initialisation du système audio ===
-    if (!soundManager.Initialize()) {
-        std::cerr << "Erreur : échec de l'initialisation du système audio" << std::endl;
+    if (!soundManager.Initialize()) {        std::cerr << "Erreur : échec de l'initialisation du système audio" << std::endl;
         // Continuer sans audio
     } else {
         // Charger tous les sons disponibles
         soundManager.LoadAllSounds();
-        
-        // Charger le son Zoo.wav (sera géré par les scènes)
-        zooSound = soundManager.LoadSound("../sound/Zoo.wav", "zoo_ambient");
-
-        if (zooSound) {
-            // Créer une source audio pour l'ambiance
-            ambientSource = soundManager.CreateAudioSource();
-            if (ambientSource) {
-                ambientSource->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-                ambientSource->SetVolume(0.3f);
-                // Ne pas jouer automatiquement - sera contrôlé par l'interface
-            }
-        }
+        // Les scènes géreront leur propre audio
     }
 
     // === Initialisation du système de scènes ===

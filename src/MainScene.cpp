@@ -98,9 +98,30 @@ bool MainScene::LoadModels() {
 
 bool MainScene::LoadAudio(SoundManager& soundManager) {
     if (!soundManager.IsInitialized()) return false;
-    soundManager.SetupAmbientAudio();
-    zooSound = soundManager.GetAmbientSound();
-    ambientSource = soundManager.GetAmbientSource();
+    
+    // Charger le thème spatial pour MainScene (complètement indépendant)
+    std::string soundName = "spatial_theme";
+    zooSound = soundManager.GetSound(soundName);
+    if (!zooSound) {
+        // Fallback si spatial_theme n'existe pas
+        soundName = "Zoo";
+        zooSound = soundManager.GetSound(soundName);
+        std::cout << "MainScene: Fallback vers Zoo" << std::endl;
+    } else {
+        std::cout << "MainScene: Chargement de spatial_theme" << std::endl;
+    }
+    
+    // Sauvegarder le nom du son actuel
+    currentSoundName = soundName;
+    
+    // Créer une source audio INDEPENDANTE pour cette scène
+    ambientSource = soundManager.CreateAudioSource();
+    if (ambientSource) {
+        ambientSource->SetPosition({0.0f, 0.0f, 0.0f});
+        ambientSource->SetVolume(0.3f);
+        std::cout << "MainScene: Source audio créée" << std::endl;
+    }
+    
     return (zooSound && ambientSource);
 }
 
@@ -187,10 +208,11 @@ void MainScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
     if (!initialized) return;
 
     // Interface de contrôles clavier unifiée
-    UIHelpers::RenderKeyboardUI(window);
-
-    // Interface audio mutualisée - passer nullptr pour que l'interface utilise le son actuel du SoundManager
-    UIHelpers::RenderAudioUI(window, soundManager, ambientSource, nullptr);
+    UIHelpers::RenderKeyboardUI(window);    // Interface audio avec le son spécifique de cette scène
+    UIHelpers::RenderAudioUI(window, soundManager, ambientSource, zooSound, currentSoundName,
+        [this, &soundManager](const std::string& soundName) -> bool {
+            return this->ChangeSceneSound(soundName, soundManager);
+        });
     
     // Interface de contrôles principaux unifiée (shader + skybox)
     UIHelpers::RenderMainControlsUI(currentSkyboxType,
@@ -203,10 +225,31 @@ const char* MainScene::GetName() const {
 }
 
 void MainScene::OnActivate() {
-    std::cout << "MainScene activée" << std::endl;
-    // Reprendre l'audio si nécessaire (une seule fois)
-    if (ambientSource && zooSound && !ambientSource->IsPlaying()) {
+    std::cout << "MainScene activée - Thème spatial" << std::endl;
+    // Toujours démarrer l'audio spatial lors de l'activation
+    if (ambientSource && zooSound) {
+        ambientSource->Stop(); // S'assurer qu'il n'y a pas de son résiduel
         ambientSource->Play(zooSound, true);
+        std::cout << "Démarrage de la musique spatial_theme" << std::endl;
+    } else {
+        std::cout << "MainScene: Impossible de démarrer la musique (source ou son manquant)" << std::endl;
+    }
+}
+
+void MainScene::OnDeactivate() {
+    std::cout << "MainScene désactivée" << std::endl;
+    // Arrêter complètement l'audio pour cette scène (au lieu de pause)
+    if (ambientSource) {
+        std::cout << "MainScene: Source audio existe" << std::endl;
+        if (ambientSource->IsPlaying() || ambientSource->IsPaused()) {
+            std::cout << "MainScene: Arrêt de la musique..." << std::endl;
+            ambientSource->Stop();
+            std::cout << "Arrêt de la musique spatial_theme" << std::endl;
+        } else {
+            std::cout << "MainScene: Musique n'était pas en cours de lecture" << std::endl;
+        }
+    } else {
+        std::cout << "MainScene: Pas de source audio disponible" << std::endl;
     }
 }
 
@@ -233,17 +276,11 @@ void MainScene::SetupCameraOverview(Camera& camera) {
     
     // Calculer les vecteurs Right et Up
     camera.Right = glm::normalize(glm::cross(camera.Front, glm::vec3(0.0f, 1.0f, 0.0f)));
-    camera.Up = glm::normalize(glm::cross(camera.Right, camera.Front));
-    
+    camera.Up = glm::normalize(glm::cross(camera.Right, camera.Front));    
     // Ajuster le zoom pour une vue plus large
     camera.Zoom = 35.0f; // Vue plus large que les 45° par défaut
     
     std::cout << "Caméra positionnée à (-229.4, 131.9, 435.1) pour vue d'ensemble de la scène spatiale" << std::endl;
-}
-
-void MainScene::OnDeactivate() {
-    std::cout << "MainScene désactivée" << std::endl;
-    // Optionnel : mettre en pause l'audio
 }
 
 void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight) {
@@ -472,6 +509,41 @@ void MainScene::ChangeSkybox(SkyboxManager::SkyboxType newType) {
         skybox = std::make_unique<Skybox>(skyboxFaces);
         std::cout << "Skybox changée pour MainScene: " << SkyboxManager::GetSkyboxName(currentSkyboxType) << std::endl;
     }
+}
+
+bool MainScene::ChangeSceneSound(const std::string& soundName, SoundManager& soundManager) {
+    auto newSound = soundManager.GetSound(soundName);
+    if (!newSound) {
+        std::cerr << "Son non trouvé: " << soundName << std::endl;
+        return false;
+    }
+    
+    // Sauvegarder l'état de lecture actuel
+    bool wasPlaying = ambientSource && ambientSource->IsPlaying();
+    bool wasPaused = ambientSource && ambientSource->IsPaused();
+    
+    // Arrêter le son actuel
+    if (ambientSource && (wasPlaying || wasPaused)) {
+        ambientSource->Stop();
+    }
+    
+    // Changer le son et sauvegarder le nom
+    zooSound = newSound;
+    currentSoundName = soundName;
+    
+    // Reprendre la lecture si elle était en cours
+    if (ambientSource && wasPlaying) {
+        ambientSource->Play(zooSound, true);
+        std::cout << "MainScene: Son changé vers " << soundName << " (reprise automatique)" << std::endl;
+    } else {
+        std::cout << "MainScene: Son changé vers " << soundName << std::endl;
+    }
+    
+    return true;
+}
+
+std::string MainScene::GetCurrentSoundName() const {
+    return currentSoundName;
 }
 
 void MainScene::InitializeAsteroidRing() {
