@@ -52,9 +52,12 @@ public:
      */
     virtual ~LightScene();    // === Méthode pour changer le son de la scène ===
     bool ChangeSceneSound(const std::string& soundName, SoundManager& soundManager);
-    
-    // === Méthode pour obtenir le nom du son actuel ===
+      // === Méthode pour obtenir le nom du son actuel ===
     std::string GetCurrentSoundName() const;
+    
+    // === Méthodes pour accéder à l'audio de la scène ===
+    std::shared_ptr<AudioSource> GetAmbientSource() const { return ambientSource; }
+    std::shared_ptr<Sound> GetAmbientSound() const { return zooSound; }
 
     // === Méthodes héritées de Scene ===
     virtual bool Initialize(Camera& camera, SoundManager& soundManager) override;

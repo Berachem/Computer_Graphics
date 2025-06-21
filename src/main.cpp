@@ -168,7 +168,7 @@ int main()
     std::cout << "ZQSD/AE: Déplacer la caméra (mode caméra libre uniquement, AZERTY)" << std::endl;
     std::cout << "Souris: Orientation de la caméra (tous modes)" << std::endl;
     std::cout << "SHIFT: Sprint (déplacements plus rapides)" << std::endl;
-    std::cout << "O: Arrêter tous les sons" << std::endl;
+    std::cout << "O: Play/Pause de la musique de la scène active" << std::endl;
     std::cout << "ESC: Quitter" << std::endl;
     std::cout << "=================" << std::endl;
 
@@ -341,12 +341,9 @@ void processInput(GLFWwindow *window)
             if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)  // E = Descendre
                 camera.ProcessKeyboard(DOWN, deltaTime * speedMultiplier);
         }
-    }
-
-    // Variables statiques pour éviter les répétitions
+    }    // Variables statiques pour éviter les répétitions
     static bool pPressed = false;
     static bool oPressed = false;
-    static bool musicPlaying = false;
     static bool tabPressed = false;
 
     // Touche TAB pour basculer entre les modes
@@ -375,21 +372,48 @@ void processInput(GLFWwindow *window)
         pPressed = false;
     }
 
-
-
-    // Touche O pour arrêter tous les sons ou les redémarrer
+    // Touche O pour basculer play/pause du son de la scène active
     if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS && !oPressed) {
         oPressed = true;
-        if (musicPlaying) {
-            soundManager.ResumeAll();
-            musicPlaying = false;
-        } else {
-            soundManager.StopAll();
-            musicPlaying = true;
+        
+        // Obtenir la scène active pour contrôler son audio
+        auto currentScene = sceneManager.GetCurrentScene();
+        if (currentScene) {
+            auto mainScene = dynamic_cast<MainScene*>(currentScene);
+            auto lightScene = dynamic_cast<LightScene*>(currentScene);
+            
+            if (mainScene) {
+                // Contrôler l'audio de MainScene
+                auto source = mainScene->GetAmbientSource();
+                auto sound = mainScene->GetAmbientSound();
+                
+                if (source && sound) {
+                    if (source->IsPlaying()) {
+                        source->Pause();
+                        std::cout << "Audio MainScene mis en pause" << std::endl;
+                    } else {
+                        source->Play(sound, true);
+                        std::cout << "Audio MainScene repris" << std::endl;
+                    }
+                }
+            } else if (lightScene) {
+                // Contrôler l'audio de LightScene
+                auto source = lightScene->GetAmbientSource();
+                auto sound = lightScene->GetAmbientSound();
+                
+                if (source && sound) {
+                    if (source->IsPlaying()) {
+                        source->Pause();
+                        std::cout << "Audio LightScene mis en pause" << std::endl;
+                    } else {
+                        source->Play(sound, true);
+                        std::cout << "Audio LightScene repris" << std::endl;
+                    }
+                }
+            }
         }
     } else if (glfwGetKey(window, GLFW_KEY_O) == GLFW_RELEASE) {
         oPressed = false;
-        soundManager.ResumeAll();
     }
 }
 
