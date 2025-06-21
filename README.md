@@ -1,6 +1,14 @@
-# Projet OpenGL – ESIEE IT Computer Graphics
+# 🌍 OpenGL – Système solaire
 
-🔮 Projet de Computer Graphics @ESIEE Paris
+> **📖 Computer Graphics - @ESIEE Paris** 
+
+> **👨‍💻 Alessandro VILLA , [Berachem MARKRIA](https://berachem.dev/) , Joshua LEMOINE , Alexandre DOMINGUES**
+
+<br/>
+
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/XwgqRBJqv1g/0.jpg)](http://www.youtube.com/watch?v=XwgqRBJqv1g "OpenGL Système Solaire")
+
+> watch it on [Youtube](http://www.youtube.com/watch?v=XwgqRBJqv1g)
 
 ## Objectif
 Créer une scène 3D en utilisant OpenGL (2.x ou 3.x) avec plusieurs objets et permettre à l'utilisateur de naviguer dans la scène.
@@ -80,7 +88,4 @@ README.md
 - [TinyOBJLoader - README et exemples](https://github.com/tinyobjloader/tinyobjloader)
 - [IMGUI - Documentation](https://github.com/ocornut/imgui)
 - [Tutoriel OpenGL moderne](https://learnopengl.com/)
-
-## Contact
-Pour toute question : [malek.bengougam@esiee.fr](mailto:malek.bengougam@esiee.fr)
 
