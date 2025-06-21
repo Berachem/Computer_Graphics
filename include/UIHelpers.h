@@ -36,6 +36,12 @@ namespace UIHelpers {
      * @param onChange Callback appelé lors du changement de sélection
      */
     void RenderSkyboxUI(const char* title, SkyboxManager::SkyboxType& currentType, std::function<void(SkyboxManager::SkyboxType)> onChange);
+        
+    /**
+     * @brief Interface de contrôles clavier unifiée (avancer/reculer, rotation)
+     * @param window Fenêtre GLFW
+     */
+    void RenderKeyboardUI(GLFWwindow* window);
 }
 
 #endif // UIHELPERS_H

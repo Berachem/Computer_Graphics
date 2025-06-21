@@ -327,7 +327,7 @@ void processInput(GLFWwindow *window)
     float speedMultiplier = 1.0f;
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
-        speedMultiplier = 5.0f;
+        speedMultiplier = 10.0f;
     }
 
     // Contrôles de la caméra (seulement en mode caméra) - Configuration AZERTY

@@ -126,6 +126,9 @@ void MainScene::Render(Camera& camera, int screenWidth, int screenHeight) {
 void MainScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
     if (!initialized) return;
 
+    // Interface de contrôles clavier unifiée
+    UIHelpers::RenderKeyboardUI(window);
+
     // Interface audio mutualisée - passer nullptr pour que l'interface utilise le son actuel du SoundManager
     UIHelpers::RenderAudioUI(window, soundManager, ambientSource, nullptr);
     
