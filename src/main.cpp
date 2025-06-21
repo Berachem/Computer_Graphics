@@ -249,20 +249,12 @@ int main()
                    camera.Position.x, camera.Position.y, camera.Position.z);
         ImGui::Text("Direction caméra: (%.1f, %.1f, %.1f)", 
                    camera.Front.x, camera.Front.y, camera.Front.z);
-        
-        ImGui::Separator();
+          ImGui::Separator();
         
         // Instructions
         ImGui::Text("Contrôles:");
         ImGui::BulletText("TAB: Basculer mode Caméra/Interface");
         ImGui::BulletText("P: Changer de scène");
-        if (currentMode == CAMERA_MODE) {
-            ImGui::BulletText("ZQSD: Déplacer la caméra (AZERTY)");
-            ImGui::BulletText("AE: Monter/Descendre");
-            ImGui::BulletText("Souris: Regarder autour");
-        } else {
-            ImGui::BulletText("Souris: Interagir avec l'interface");
-        }
         ImGui::BulletText("ESC: Quitter");
 
         ImGui::Separator();
@@ -283,51 +275,7 @@ int main()
         ImGui::SameLine();
         if (ImGui::Button("Scène Suivante")) {
             sceneManager.NextScene();
-        }
-
-        ImGui::End();
-
-        // === Sélecteur de Shader d'Éclairage ===
-        if (ShaderManager::getInstance().GetShowShaderSelector()) {
-            ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Sélecteur de Shader", &ShaderManager::getInstance().GetShowShaderSelector(), 
-                        ImGuiWindowFlags_AlwaysAutoResize);
-            
-            ImGui::Text("Shader d'Éclairage Actuel:");
-            
-            // Radio buttons pour sélectionner le shader
-            LightingShaderType currentType = ShaderManager::getInstance().GetLightingShaderType();
-            
-            if (ImGui::RadioButton("Phong", currentType == LightingShaderType::PHONG)) {
-                ShaderManager::getInstance().SetLightingShaderType(LightingShaderType::PHONG);
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Lambert", currentType == LightingShaderType::LAMBERT)) {
-                ShaderManager::getInstance().SetLightingShaderType(LightingShaderType::LAMBERT);
-            }
-            
-            ImGui::Separator();
-            
-            // Informations sur les objets affectés
-            ImGui::Text("Objets utilisant les shaders d'éclairage:");
-            ImGui::BulletText("Vaisseau (gris métallique)");
-            ImGui::BulletText("Astéroïdes (rouge, bleu, jaune, violet)");
-            ImGui::BulletText("Sphères de test (vert/orange)");
-            
-            ImGui::Separator();
-            ImGui::Text("Objets NON affectés (shaders spécialisés):");
-            ImGui::BulletText("Soleil (shader animé spécialisé)");
-            ImGui::BulletText("Lune (shader texturé)");
-            
-            ImGui::Separator();
-            
-            // Informations sur les shaders
-            ImGui::Text("Différences:");
-            ImGui::BulletText("Phong: Éclairage avec composante spéculaire");
-            ImGui::BulletText("Lambert: Éclairage diffus uniquement");
-            
-            ImGui::End();
-        }
+        }        ImGui::End();
 
         // Rendu de l'interface de la scène actuelle
         sceneManager.RenderUI(window, soundManager);

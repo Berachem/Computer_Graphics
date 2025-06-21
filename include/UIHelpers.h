@@ -7,8 +7,11 @@
 #include <memory>
 #include <functional>
 
+// Forward declarations
 class Sound;
 class AudioSource;
+class ShaderManager;
+enum class LightingShaderType;
 
 namespace UIHelpers {
     /**
@@ -19,12 +22,15 @@ namespace UIHelpers {
                        std::shared_ptr<Sound> sound = nullptr);
 
     /**
-     * @brief Clavier virtuel mutalisé
+     * @brief Panneau de contrôles principaux unifié (shader + skybox)
+     * @param currentSkyboxType Référence au type de skybox courant
+     * @param onSkyboxChange Callback appelé lors du changement de skybox
      */
-    void RenderKeyboardUI(GLFWwindow* window);
+    void RenderMainControlsUI(SkyboxManager::SkyboxType& currentSkyboxType, 
+                              std::function<void(SkyboxManager::SkyboxType)> onSkyboxChange);
 
     /**
-     * @brief Interface de sélection d'une skybox via un menu déroulant
+     * @brief Interface de sélection d'une skybox via un menu déroulant (obsolète, utiliser RenderMainControlsUI)
      * @param title Titre de la fenêtre ImGui
      * @param currentType Référence au type de skybox courant
      * @param onChange Callback appelé lors du changement de sélection

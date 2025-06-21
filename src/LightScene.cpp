@@ -131,14 +131,14 @@ void LightScene::RenderLight(Camera& camera, int screenWidth, int screenHeight) 
     }
 }
 
-void LightScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {    if (!initialized) return;
+void LightScene::RenderUI(GLFWwindow* window, SoundManager& soundManager) {
+    if (!initialized) return;
 
-    // Interface audio et clavier mutualisée - passer nullptr pour que l'interface utilise le son actuel du SoundManager
+    // Interface audio mutualisée - passer nullptr pour que l'interface utilise le son actuel du SoundManager
     UIHelpers::RenderAudioUI(window, soundManager, ambientSource, nullptr);
-    UIHelpers::RenderKeyboardUI(window);
-
-    // Interface de sélection de skybox via menu déroulant mutualisé
-    UIHelpers::RenderSkyboxUI("Contrôles Skybox - LightScene", currentSkyboxType,
+    
+    // Interface de contrôles principaux unifiée (shader + skybox)
+    UIHelpers::RenderMainControlsUI(currentSkyboxType,
         [this](SkyboxManager::SkyboxType type) { ChangeSkybox(type); }
     );
 }
