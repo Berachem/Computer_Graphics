@@ -21,10 +21,9 @@
  * sphères, effets de lumière et sons d'ambiance.
  */
 class MainScene : public Scene {
-private:
-    // Les shaders sont maintenant gérés par le ShaderManager global    // === Modèles 3D ===
-    std::unique_ptr<Model> myModel;
-      // === Anneau d'astéroïdes ===
+private:    // Les shaders sont maintenant gérés par le ShaderManager global
+
+    // === Anneau d'astéroïdes ===
     std::unique_ptr<Model> asteroidModel; // Un seul modèle réutilisé
     static const int ASTEROID_COUNT = 72; // Nombre d'astéroïdes dans l'anneau (plus dense)
     
@@ -37,8 +36,34 @@ private:
         glm::vec3 color;       // Couleur de l'astéroïde
         float orbitSpeed;      // Vitesse orbitale
     };
+      AsteroidData asteroids[ASTEROID_COUNT];
     
-    AsteroidData asteroids[ASTEROID_COUNT];    // === Sphères ===
+    // === Vaisseaux français ===
+    std::unique_ptr<Model> spaceshipModel;
+    static const int SPACESHIP_COUNT = 3;
+      struct SpaceshipData {
+        glm::vec3 color;        // Couleur du vaisseau (bleu, blanc, rouge)
+        float angleOffset;      // Décalage angulaire entre les vaisseaux
+        float orbitRadius;      // Rayon de l'orbite
+        float orbitSpeed;       // Vitesse orbitale
+        float currentAngle;     // Angle actuel dans l'orbite
+        glm::vec3 randomOffset; // Petit décalage aléatoire pour le mouvement
+        float randomPhase;      // Phase pour l'oscillation aléatoire
+        
+        // Paramètres pour mouvements verticaux naturels individuels
+        float heightFreq1, heightFreq2, heightFreq3;    // Fréquences des oscillations verticales
+        float heightAmp1, heightAmp2, heightAmp3;       // Amplitudes des oscillations verticales
+        float heightPhase1, heightPhase2, heightPhase3; // Phases des oscillations verticales
+        
+        // Paramètres pour mouvements horizontaux individuels
+        float horizontalFreq1, horizontalFreq2;         // Fréquences des oscillations horizontales
+        float horizontalAmp1, horizontalAmp2;           // Amplitudes des oscillations horizontales
+        float horizontalPhase1, horizontalPhase2;       // Phases des oscillations horizontales
+    };
+    
+    SpaceshipData spaceships[SPACESHIP_COUNT];
+
+    // === Sphères ===
     std::unique_ptr<Sphere> moonSphere;
     std::unique_ptr<Sphere> sunSphere;
 
@@ -54,8 +79,8 @@ private:
     bool initialized;    // === Méthodes privées ===
     bool LoadShaders();
     bool LoadModels();
-    bool LoadAudio(SoundManager& soundManager);
-    void InitializeAsteroidRing();
+    bool LoadAudio(SoundManager& soundManager);    void InitializeAsteroidRing();
+    void InitializeSpaceships();
     void RenderObjects(Camera& camera, int screenWidth, int screenHeight);
     void ChangeSkybox(SkyboxManager::SkyboxType newType);
 

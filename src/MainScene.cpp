@@ -73,12 +73,17 @@ bool MainScene::LoadShaders() {
 
 bool MainScene::LoadModels() {
     try {
-        myModel = std::make_unique<Model>("../models/map-bump.obj");
-        
         // Charger un seul modèle d'astéroïde (réutilisé pour tout l'anneau)
         asteroidModel = std::make_unique<Model>("../models/astroid.obj");
-          // Initialiser l'anneau d'astéroïdes avec des propriétés variées
+        
+        // Charger le modèle de vaisseau (réutilisé pour les 3 vaisseaux français)
+        spaceshipModel = std::make_unique<Model>("../models/map-bump.obj"); // Utilise le même modèle pour les vaisseaux
+        
+        // Initialiser l'anneau d'astéroïdes avec des propriétés variées
         InitializeAsteroidRing();
+        
+        // Initialiser les vaisseaux français
+        InitializeSpaceships();
         
         moonSphere = std::make_unique<Sphere>("../textures/spherical_moon_texture.jpg", 9.0f, 36, 18); // Lune très imposante (x3)
         sunSphere = std::make_unique<Sphere>("", sunRadius, 36, 18);
@@ -107,14 +112,51 @@ void MainScene::Update(float deltaTime, GLFWwindow* window, Camera& camera, Soun
         float listenerForward[3] = {camera.Front.x, camera.Front.y, camera.Front.z};
         float listenerUp[3] = {camera.Up.x, camera.Up.y, camera.Up.z};
         soundManager.SetListenerPosition(listenerPos, listenerForward, listenerUp);
-    }
-
-    // Mettre à jour la position du soleil (rotation lente)
+    }    // Mettre à jour la position du soleil (rotation lente)
     float currentFrame = static_cast<float>(glfwGetTime());
     float angle = currentFrame * 0.0005f;
     lightPosition.x = -sunDistance * cos(angle);
     lightPosition.z = -sunDistance * sin(angle);
     lightPosition.y = 15.0f;
+    
+    // Mettre à jour les vaisseaux français
+    for (int i = 0; i < SPACESHIP_COUNT; ++i) {
+        SpaceshipData& ship = spaceships[i];
+        
+        // Mise à jour de l'angle orbital
+        ship.currentAngle += ship.orbitSpeed * deltaTime;
+        if (ship.currentAngle > 2.0f * M_PI) {
+            ship.currentAngle -= 2.0f * M_PI;
+        }
+          // Mise à jour des phases d'oscillation individuelles pour des mouvements naturels
+        ship.randomPhase += deltaTime * 2.0f; // Phase générale
+        if (ship.randomPhase > 2.0f * M_PI) {
+            ship.randomPhase -= 2.0f * M_PI;
+        }
+        
+        // Mise à jour des phases verticales individuelles
+        ship.heightPhase1 += deltaTime * ship.heightFreq1;
+        ship.heightPhase2 += deltaTime * ship.heightFreq2;
+        ship.heightPhase3 += deltaTime * ship.heightFreq3;
+        
+        // Mise à jour des phases horizontales individuelles
+        ship.horizontalPhase1 += deltaTime * ship.horizontalFreq1;
+        ship.horizontalPhase2 += deltaTime * ship.horizontalFreq2;
+        
+        // Normaliser les phases pour éviter les débordements
+        if (ship.heightPhase1 > 2.0f * M_PI) ship.heightPhase1 -= 2.0f * M_PI;
+        if (ship.heightPhase2 > 2.0f * M_PI) ship.heightPhase2 -= 2.0f * M_PI;
+        if (ship.heightPhase3 > 2.0f * M_PI) ship.heightPhase3 -= 2.0f * M_PI;
+        if (ship.horizontalPhase1 > 2.0f * M_PI) ship.horizontalPhase1 -= 2.0f * M_PI;
+        if (ship.horizontalPhase2 > 2.0f * M_PI) ship.horizontalPhase2 -= 2.0f * M_PI;
+        
+        // Calculer le mouvement horizontal aléatoire naturel
+        ship.randomOffset = glm::vec3(
+            sin(ship.horizontalPhase1) * ship.horizontalAmp1 + sin(ship.horizontalPhase2) * ship.horizontalAmp2,
+            0.0f, // Pas d'oscillation verticale ici (gérée dans le rendu)
+            cos(ship.horizontalPhase1 * 0.7f) * ship.horizontalAmp1 + cos(ship.horizontalPhase2 * 1.3f) * ship.horizontalAmp2
+        );
+    }
 }
 
 void MainScene::Render(Camera& camera, int screenWidth, int screenHeight) {
@@ -166,23 +208,13 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
                                                0.1f, 1000.0f);
         glm::mat4 view = camera.GetViewMatrix();
         skybox->Render(view, projection);
-    }
-
-    // Obtenir les shaders depuis le gestionnaire global
+    }    // Obtenir les shaders depuis le gestionnaire global
     Shader* metalShader = ShaderManager::getInstance().GetMetalShader();
     Shader* texturedShader = ShaderManager::getInstance().GetTexturedShader();
     Shader* sunShader = ShaderManager::getInstance().GetSunShader();
-    Shader* currentLightingShader = ShaderManager::getInstance().GetCurrentLightingShader();    //======== VAISSEAU (utilise le shader d'éclairage sélectionné pour voir la différence) ========
-    if (currentLightingShader && g_uboManager) {
-        currentLightingShader->use();
-        
-        glm::mat4 model = glm::mat4(1.0f);
-        g_uboManager->UpdateTransformUBO(model);
-        
-        // Couleur gris métallique pour bien voir les effets d'éclairage
-        currentLightingShader->setVec3("objectColor", glm::vec3(0.7f, 0.7f, 0.8f));
-        myModel->Draw(*currentLightingShader);
-    }    //======== LUNE (orbite autour du soleil, plus éloignée que les astéroïdes) ========
+    Shader* currentLightingShader = ShaderManager::getInstance().GetCurrentLightingShader();
+
+    //======== LUNE (orbite autour du soleil, plus éloignée que les astéroïdes) ========
     if (texturedShader && g_uboManager) {
         texturedShader->use();
 
@@ -278,12 +310,94 @@ void MainScene::RenderObjects(Camera& camera, int screenWidth, int screenHeight)
             
             g_uboManager->UpdateTransformUBO(asteroidModel);
             this->asteroidModel->Draw(*currentLightingShader);        }
-        
-        // Afficher des informations de debug occasionnelles
+          // Afficher des informations de debug occasionnelles
         static int frameCounter = 0;
         frameCounter++;
         if (frameCounter % 300 == 0) { // Toutes les 5 secondes environ à 60 FPS
             std::cout << "Anneau d'astéroïdes : " << ASTEROID_COUNT << " astéroïdes en orbite" << std::endl;
+        }
+    }
+    
+    //======== VAISSEAUX FRANÇAIS (utilisent le shader d'éclairage sélectionné) ========
+    if (currentLightingShader && g_uboManager && spaceshipModel) {
+        currentLightingShader->use();
+        
+        for (int i = 0; i < SPACESHIP_COUNT; ++i) {
+            const SpaceshipData& ship = spaceships[i];            // Position orbitale de base
+            float x = ship.orbitRadius * cos(ship.currentAngle);
+            float z = ship.orbitRadius * sin(ship.currentAngle);
+            
+            // === VARIATION DE HAUTEUR NATURELLE ET UNIQUE POUR CHAQUE VAISSEAU ===
+            // Utiliser les paramètres individuels pour créer des mouvements complètement différents
+            float heightVariation1 = sin(ship.heightPhase1) * ship.heightAmp1;
+            float heightVariation2 = sin(ship.heightPhase2) * ship.heightAmp2;
+            float heightVariation3 = sin(ship.heightPhase3) * ship.heightAmp3;
+            
+            // Ajouter des variations complexes basées sur l'angle orbital pour plus de naturel
+            float orbitBasedVariation = sin(ship.currentAngle * 0.5f + ship.randomPhase) * 3.0f;
+            
+            // Combinaison de toutes les oscillations pour un mouvement unique
+            float y = heightVariation1 + heightVariation2 + heightVariation3 + orbitBasedVariation;
+            
+            // === MOUVEMENT HORIZONTAL NATUREL ===
+            // Utiliser les oscillations horizontales calculées dans Update()
+            glm::vec3 horizontalOffset = glm::vec3(
+                ship.randomOffset.x * 0.8f,  // Utiliser l'oscillation horizontale calculée
+                0.0f,                         // Pas d'offset vertical supplémentaire ici
+                ship.randomOffset.z * 0.8f   // Utiliser l'oscillation horizontale calculée
+            );
+            
+            glm::vec3 basePosition = glm::vec3(x, y, z) + horizontalOffset;
+            
+            // Position finale (orbite autour du soleil)
+            glm::vec3 finalPosition = glm::vec3(
+                lightPosition.x + basePosition.x,
+                lightPosition.y + basePosition.y,
+                lightPosition.z + basePosition.z
+            );
+            
+            // === ORIENTATION CORRECTE : NEZ DANS LA DIRECTION DU MOUVEMENT ===
+            // Calculer la direction du mouvement orbital (tangente à l'orbite)
+            glm::vec3 movementDirection = glm::vec3(-sin(ship.currentAngle), 0.0f, cos(ship.currentAngle));
+            movementDirection = glm::normalize(movementDirection);
+            
+            // Le "nez" du vaisseau pointe vers l'avant par défaut (axe Z+ dans le modèle)
+            // Calculer l'angle de rotation pour orienter le nez dans la direction du mouvement
+            float orientationAngle = atan2(movementDirection.x, movementDirection.z);
+            
+            // Couleur du vaisseau selon le drapeau français
+            currentLightingShader->setVec3("objectColor", ship.color);
+            
+            // Matrice de transformation du vaisseau
+            glm::mat4 spaceshipModel_mat = glm::mat4(1.0f);
+            spaceshipModel_mat = glm::translate(spaceshipModel_mat, finalPosition);
+              // Orientation : rotation pour que le nez suive la trajectoire
+            spaceshipModel_mat = glm::rotate(spaceshipModel_mat, orientationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+              // Échelle augmentée pour les vaisseaux pour les rendre plus visibles
+            spaceshipModel_mat = glm::scale(spaceshipModel_mat, glm::vec3(0.8f, 0.8f, 0.8f));
+            
+            // === INCLINAISONS NATURELLES BASÉES SUR LES MOUVEMENTS ===
+            // Inclinaison latérale basée sur le mouvement horizontal (comme un avion qui vire)
+            float lateralTilt = (ship.randomOffset.x / ship.horizontalAmp1) * 0.2f; // Inclinaison proportionnelle au mouvement
+            spaceshipModel_mat = glm::rotate(spaceshipModel_mat, lateralTilt, glm::vec3(0.0f, 0.0f, 1.0f));
+            
+            // Inclinaison longitudinale basée sur la variation de hauteur (comme un avion qui monte/descend)
+            float verticalTilt = (heightVariation1 / ship.heightAmp1) * 0.15f;
+            spaceshipModel_mat = glm::rotate(spaceshipModel_mat, verticalTilt, glm::vec3(1.0f, 0.0f, 0.0f));
+            
+            // Légère rotation de roulis pour plus de dynamisme
+            float rollAngle = sin(ship.randomPhase * 0.5f) * 0.08f;
+            spaceshipModel_mat = glm::rotate(spaceshipModel_mat, rollAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+            
+            g_uboManager->UpdateTransformUBO(spaceshipModel_mat);
+            this->spaceshipModel->Draw(*currentLightingShader);
+        }
+        
+        // Debug occasionnel pour les vaisseaux
+        static int spaceshipFrameCounter = 0;
+        spaceshipFrameCounter++;
+        if (spaceshipFrameCounter % 400 == 0) {
+            std::cout << "Vaisseaux français en formation : Bleu, Blanc, Rouge" << std::endl;
         }
     }
 }
@@ -292,8 +406,8 @@ void MainScene::Cleanup() {
     if (ambientSource) {
         ambientSource->Stop();
     }    // Les modèles 3D se nettoient automatiquement avec les smart pointers
-    myModel.reset();
     asteroidModel.reset(); // Un seul modèle d'astéroïde maintenant
+    spaceshipModel.reset(); // Modèle des vaisseaux français
 
     moonSphere.reset();
     sunSphere.reset();
@@ -411,7 +525,77 @@ void MainScene::InitializeAsteroidRing() {
         }
         asteroid.orbitSpeed = baseOrbitSpeed;
     }
-    
-    std::cout << "Anneau d'astéroïdes initialisé avec " << ASTEROID_COUNT << " astéroïdes" << std::endl;
+      std::cout << "Anneau d'astéroïdes initialisé avec " << ASTEROID_COUNT << " astéroïdes" << std::endl;
     std::cout << "Palette de couleurs étendue : " << asteroidColors.size() << " variations réalistes" << std::endl;
+}
+
+void MainScene::InitializeSpaceships() {
+    // Couleurs du drapeau français : Bleu, Blanc, Rouge
+    glm::vec3 frenchColors[SPACESHIP_COUNT] = {
+        glm::vec3(0.0f, 0.2f, 0.8f),    // Bleu France
+        glm::vec3(0.9f, 0.9f, 0.9f),    // Blanc
+        glm::vec3(0.8f, 0.1f, 0.1f)     // Rouge France
+    };
+    
+    // Initialiser le générateur avec une graine différente
+    srand(static_cast<unsigned int>(123));
+    
+    for (int i = 0; i < SPACESHIP_COUNT; ++i) {
+        SpaceshipData& ship = spaceships[i];
+        
+        // Couleur selon le drapeau français
+        ship.color = frenchColors[i];
+          // Angles de départ côte à côte avec un petit espacement
+        ship.angleOffset = (i - 1) * 0.15f; // Environ 8.6° d'espacement entre les vaisseaux
+        
+        // Tous orbitent au même rayon (entre les astéroïdes et la lune)
+        ship.orbitRadius = 180.0f; // Entre les astéroïdes (~60) et la lune (250)
+        
+        // Vitesse orbitale synchronisée mais légèrement variée
+        ship.orbitSpeed = 0.6f + (i * 0.05f); // Vitesses légèrement différentes : 0.6, 0.65, 0.7
+        
+        // Angle initial
+        ship.currentAngle = ship.angleOffset;
+        
+        // Mouvement aléatoire horizontal léger pour plus de réalisme
+        ship.randomOffset = glm::vec3(
+            ((rand() % 200) - 100) / 1000.0f,  // ±0.1 unités de décalage horizontal
+            0.0f,                               // Pas d'offset vertical initial
+            ((rand() % 200) - 100) / 1000.0f   // ±0.1 unités de décalage horizontal
+        );
+          // Phase aléatoire différente pour chaque vaisseau pour des variations de hauteur uniques
+        ship.randomPhase = (rand() % 628) / 100.0f + (i * 2.1f); // 0 à 2π + décalage par vaisseau
+        
+        // === PARAMÈTRES INDIVIDUELS POUR MOUVEMENTS VERTICAUX NATURELS ===
+        // Chaque vaisseau a ses propres fréquences, amplitudes et phases pour un comportement unique
+        
+        // Oscillation principale (lente et ample)
+        ship.heightFreq1 = 0.8f + ((rand() % 100) / 100.0f) * 0.6f;    // 0.8 à 1.4
+        ship.heightAmp1 = 6.0f + ((rand() % 100) / 100.0f) * 8.0f;     // 6 à 14 unités
+        ship.heightPhase1 = ((rand() % 628) / 100.0f);                  // 0 à 2π
+        
+        // Oscillation secondaire (moyenne)
+        ship.heightFreq2 = 1.2f + ((rand() % 100) / 100.0f) * 1.0f;    // 1.2 à 2.2
+        ship.heightAmp2 = 2.0f + ((rand() % 100) / 100.0f) * 4.0f;     // 2 à 6 unités
+        ship.heightPhase2 = ((rand() % 628) / 100.0f);                  // 0 à 2π
+        
+        // Oscillation rapide (petite et vive)
+        ship.heightFreq3 = 2.5f + ((rand() % 100) / 100.0f) * 2.0f;    // 2.5 à 4.5
+        ship.heightAmp3 = 0.5f + ((rand() % 100) / 100.0f) * 2.0f;     // 0.5 à 2.5 unités
+        ship.heightPhase3 = ((rand() % 628) / 100.0f);                  // 0 à 2π
+        
+        // === PARAMÈTRES INDIVIDUELS POUR MOUVEMENTS HORIZONTAUX NATURELS ===
+        
+        // Oscillation horizontale lente (déviation générale)
+        ship.horizontalFreq1 = 0.3f + ((rand() % 100) / 100.0f) * 0.4f; // 0.3 à 0.7
+        ship.horizontalAmp1 = 1.0f + ((rand() % 100) / 100.0f) * 2.0f;  // 1 à 3 unités
+        ship.horizontalPhase1 = ((rand() % 628) / 100.0f);               // 0 à 2π
+        
+        // Oscillation horizontale rapide (vibrations)
+        ship.horizontalFreq2 = 1.5f + ((rand() % 100) / 100.0f) * 1.0f; // 1.5 à 2.5
+        ship.horizontalAmp2 = 0.2f + ((rand() % 100) / 100.0f) * 0.6f;  // 0.2 à 0.8 unités
+        ship.horizontalPhase2 = ((rand() % 628) / 100.0f);               // 0 à 2π
+    }
+    
+    std::cout << "Vaisseaux français initialisés : Bleu, Blanc, Rouge" << std::endl;
 }
